@@ -1,0 +1,19 @@
+{
+  "name": "skydrop",
+  "version": "1.0.0",
+  "private": true,
+  "description": "SkyDrop - 60 level parachute challenge, packaged for Android with Capacitor",
+  "scripts": {
+    "build:web": "node scripts/build-web.mjs",
+    "sync": "npm run build:web && cap sync android",
+    "open:android": "cap open android",
+    "apk:debug": "npm run sync && cd android && gradlew.bat assembleDebug"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7.0.0"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.0.0",
+    "@capacitor/core": "^7.0.0"
+  }
+}

@@ -35,33 +35,25 @@
   h1,h2,h3,.display{ font-family:'Baloo 2', sans-serif; }
 
   #app{
-    max-width:520px;
     margin:0 auto;
+    width:100%;
     height:100%;
     height:100dvh;
     display:flex;
     flex-direction:column;
     align-items:center;
     justify-content:center;
-    padding:6px;
+    padding:0;
   }
 
   #gameWrap{
     position:relative;
-    width:100%;
-    max-width:480px;
-    max-height:100%;
-    aspect-ratio: 480/800;
-    border-radius:18px;
     overflow:hidden;
-    box-shadow: 0 20px 50px rgba(0,0,0,0.45), 0 0 0 3px rgba(255,255,255,0.06) inset;
     background:#000;
   }
 
   canvas{
     display:block;
-    width:100%;
-    height:100%;
   }
 
   /* ---------- HUD ---------- */
@@ -423,7 +415,7 @@
 <body>
 <div id="app">
   <div id="gameWrap">
-    <canvas id="game" width="480" height="800"></canvas>
+    <canvas id="game"></canvas>
 
     <div id="hud">
       <div style="display:flex; gap:8px; align-items:center;">
@@ -1130,25 +1122,41 @@ function activeAbilities(){
 
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
-const W = canvas.width, H = canvas.height;
-const GROUND_Y = H - 90;
+// The game is authored in a 480-unit-wide "design space". The canvas fills the
+// whole portrait viewport: the width always maps to exactly 480 design units,
+// and the height stretches to match the real screen ratio, so a taller phone
+// simply shows more sky above the plane. On wide screens (desktop) we clamp to
+// a minimum playable height and centre the portrait play area instead.
+const W = 480;
+const MIN_DESIGN_H = 760;
+let H = 800;
+let GROUND_Y = H - 90;
+let BASE_SCALE = 1; // design units -> device pixels, re-applied every frame
 
-// Fit the game box to the actual phone/browser viewport, keeping the
-// native 480:800 portrait ratio so nothing stretches or gets cropped.
-function fitGameWrap(){
+function setupCanvas(){
   const wrap = document.getElementById('gameWrap');
-  const ratio = 480/800;
-  const availW = document.getElementById('app').clientWidth - 4;
-  const availH = document.getElementById('app').clientHeight - 4;
-  let w = Math.min(availW, 480);
-  let h = w/ratio;
-  if(h > availH){ h = availH; w = h*ratio; }
-  wrap.style.width = w+'px';
-  wrap.style.height = h+'px';
+  const app = document.getElementById('app');
+  const availW = app.clientWidth;
+  const availH = app.clientHeight;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+
+  const viewScale = Math.min(availW / W, availH / MIN_DESIGN_H);
+  H = Math.round(availH / viewScale);
+  GROUND_Y = H - 90;
+
+  const cssW = Math.round(W * viewScale);
+  const cssH = availH;
+  wrap.style.width = cssW + 'px';
+  wrap.style.height = cssH + 'px';
+  canvas.style.width = cssW + 'px';
+  canvas.style.height = cssH + 'px';
+  canvas.width = Math.round(cssW * dpr);
+  canvas.height = Math.round(cssH * dpr);
+  BASE_SCALE = viewScale * dpr;
 }
-window.addEventListener('resize', fitGameWrap);
-window.addEventListener('orientationchange', ()=> setTimeout(fitGameWrap,150));
-fitGameWrap();
+window.addEventListener('resize', setupCanvas);
+window.addEventListener('orientationchange', ()=> setTimeout(setupCanvas,150));
+setupCanvas();
 
 // ---------------------------------------------------------------
 // Config: scenery themes, vehicle types, characters, parachutes
@@ -1301,7 +1309,11 @@ function makeObstacles(n){
 
 function resetPlayerForLevel(){
   const cfg = state.cfg;
-  const planeY = 40;
+  // Anchor the action to the ground: the chute always opens ~430 units up,
+  // and the plane flies a fixed distance above that, so the freefall lasts
+  // the same time no matter how tall the screen is — extra height is just sky.
+  const openAtY = GROUND_Y - 430 - Math.random()*50;
+  const planeY = Math.max(40, openAtY - 250);
 
   // Target position — the plane's flight line always crosses the whole
   // screen, so wherever the target sits, timing the jump over it is a real,
@@ -1331,7 +1343,8 @@ function resetPlayerForLevel(){
     vx: 0,
     vy: 2.2,
     chuteOpen: false,
-    openAt: GROUND_Y - 430 - Math.random()*50,
+    openAt: openAtY,
+    startY: planeY,
     legAngle:0,
     shieldUntil: 0,
     dodgeUntil: 0,
@@ -2891,6 +2904,9 @@ function triggerCameraNudge(dx, dy){
 }
 
 function draw(){
+  // establish the design-space -> device-pixel transform fresh each frame;
+  // every save/translate/scale below nests under this
+  ctx.setTransform(BASE_SCALE, 0, 0, BASE_SCALE, 0, 0);
   const cfg = state.cfg;
   if(!cfg){ ctx.fillStyle='#0b1830'; ctx.fillRect(0,0,W,H); return; }
   const theme = SCENERIES[cfg.scenery];
@@ -2928,7 +2944,8 @@ function draw(){
 
   // altitude bar — drawn outside the camera transform so it stays put on screen
   const p = state.player;
-  const pct = Math.max(0, Math.min(1, 1 - p.y/GROUND_Y));
+  const spanTop = (p.startY ?? 40);
+  const pct = Math.max(0, Math.min(1, (GROUND_Y - p.y) / (GROUND_Y - spanTop)));
   ctx.fillStyle='rgba(255,255,255,0.15)';
   ctx.fillRect(W-26,20,10,GROUND_Y-40);
   ctx.fillStyle='#ffd166';

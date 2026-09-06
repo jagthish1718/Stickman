@@ -40,6 +40,40 @@ targets, and stronger wind drift:
 6. Levels 48-54 — bobbing boat
 7. Levels 55-60 — cargo ship
 
+## Android app
+
+The game is also packaged as an Android app with [Capacitor](https://capacitorjs.com/).
+`index.html` stays the single source of truth — `npm run build:web` copies it into
+`www/`, which Capacitor bundles into the app.
+
+### Prerequisites
+
+- Node.js 20+
+- Android Studio with the Android SDK
+- JDK 21 (Android Studio bundles one at
+  `C:\Program Files\Android\openjdk\jdk-21.0.8`). Newer JDKs are not yet
+  supported by this Gradle version — point `JAVA_HOME` at JDK 21 before building.
+
+### Build a debug APK
+
+```bash
+npm install
+npm run build:web
+npx cap sync android
+
+# from the android/ folder, with JAVA_HOME set to JDK 21
+cd android
+gradlew.bat assembleDebug
+```
+
+The APK lands at `android/app/build/outputs/apk/debug/app-debug.apk`.
+
+### Open in Android Studio
+
+```bash
+npx cap open android
+```
+
 ## Files
 
 | File | Purpose |
@@ -47,3 +81,5 @@ targets, and stronger wind drift:
 | `index.html` | The full game |
 | `skydrop.html` | Earlier, smaller build |
 | `skydrop demo.html` | Early demo build |
+| `android/` | Capacitor Android project |
+| `scripts/build-web.mjs` | Copies `index.html` into `www/` for packaging |
