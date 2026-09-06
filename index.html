@@ -79,40 +79,45 @@
 
   /* ---------- Touch controls ---------- */
   #touchControls{
-    position:absolute; bottom:14px; left:0; right:0;
-    display:flex; justify-content:space-between; padding:0 16px;
+    position:absolute; left:0; right:0;
+    bottom:calc(18px + env(safe-area-inset-bottom, 0px));
+    display:flex; justify-content:space-between; align-items:flex-end;
+    padding:0 12px;
     pointer-events:none;
   }
+  /* steering pair bottom-left, action cluster bottom-right — both sit right
+     under where a thumb naturally rests */
+  .ctrlGroup{ display:flex; gap:9px; align-items:flex-end; }
   .padBtn{
     pointer-events:auto;
-    width:64px; height:64px;
+    width:50px; height:50px;
     border-radius:50%;
     background:rgba(255,255,255,0.12);
     border:2px solid rgba(255,255,255,0.35);
     color:#fff;
-    font-size:26px;
+    font-size:20px;
     display:flex; align-items:center; justify-content:center;
     backdrop-filter: blur(2px);
     touch-action:none;
   }
-  .padBtn:active{ background:rgba(255,255,255,0.3); }
+  .padBtn:active{ background:rgba(255,255,255,0.3); transform:scale(0.94); }
   .dodgeBtn{
     background:rgba(127,232,255,0.22);
     border-color:rgba(127,232,255,0.55);
-    font-size:24px;
+    font-size:18px;
     transition: opacity 0.15s ease;
   }
   .diveBtn{
     background:rgba(255,138,76,0.22);
     border-color:rgba(255,138,76,0.55);
-    font-size:24px;
+    font-size:18px;
   }
   .diveBtn.active{ background:rgba(255,138,76,0.5); }
 
   .shootBtn{
     background:rgba(255,95,109,0.22);
     border-color:rgba(255,95,109,0.55);
-    font-size:22px;
+    font-size:17px;
     transition: opacity 0.15s ease;
   }
 
@@ -165,14 +170,14 @@
   #jumpBtn{
     font-family:'Baloo 2', sans-serif;
     font-weight:800;
-    font-size:20px;
+    font-size:16px;
     color:#12233d;
     background:linear-gradient(180deg, var(--gold), var(--orange));
     border:none;
-    padding:16px 30px;
-    border-radius:18px;
+    padding:11px 22px;
+    border-radius:15px;
     cursor:pointer;
-    box-shadow: 0 6px 0 #b8560f, 0 10px 22px rgba(0,0,0,0.4);
+    box-shadow: 0 5px 0 #b8560f, 0 8px 18px rgba(0,0,0,0.4);
     animation: jumpPulse 1s ease-in-out infinite;
   }
   #jumpBtn:active{ transform: translateY(4px); box-shadow: 0 2px 0 #b8560f; }
@@ -375,6 +380,7 @@
     margin:0 auto 5px; border:2px solid rgba(255,255,255,0.25);
   }
   .shopName{ font-size:10.5px; font-weight:700; color:var(--cream); line-height:1.2; }
+  .shopShape{ font-size:8.5px; font-weight:700; color:#9fc3e6; margin-top:1px; text-transform:capitalize; letter-spacing:0.2px; }
   .shopTag{ font-size:10px; font-weight:800; margin-top:3px; }
   .shopTag.free{ color:var(--mint); }
   .shopTag.premium{ color:var(--gold); }
@@ -389,6 +395,38 @@
   .stars{ font-size:30px; letter-spacing:6px; height:36px; }
   .stars .on{ color:var(--gold); text-shadow:0 2px 4px rgba(0,0,0,0.4); }
   .stars .off{ color:rgba(255,255,255,0.2); }
+
+  /* ---------- Level progress trail (result screen) ---------- */
+  .progressTrail{ width:100%; max-width:400px; display:flex; flex-direction:column; gap:8px; }
+  .trailTrack{ position:relative; height:34px; }
+  .trailTrack::before{
+    content:''; position:absolute; left:5%; right:5%; top:50%; height:4px;
+    transform:translateY(-50%); border-radius:2px;
+    background:rgba(255,255,255,0.14);
+  }
+  .trailFill{
+    position:absolute; left:5%; top:50%; height:4px;
+    transform:translateY(-50%); border-radius:2px;
+    background:linear-gradient(90deg, var(--gold), var(--orange));
+    transition:width 0.5s ease;
+  }
+  .trailNodes{ position:absolute; inset:0; display:flex; justify-content:space-between; padding:0 calc(5% - 13px); }
+  .trailNode{
+    width:26px; height:26px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:13px; line-height:1;
+    background:var(--panel); border:2px solid rgba(255,255,255,0.18);
+    filter:grayscale(0.7); opacity:0.5;
+  }
+  .trailNode.done{ filter:none; opacity:1; border-color:var(--gold); background:rgba(255,209,102,0.2); }
+  .trailNode.current{
+    filter:none; opacity:1; border-color:var(--mint);
+    box-shadow:0 0 0 4px rgba(79,214,160,0.25);
+    animation:trailPulse 1.2s ease-in-out infinite;
+  }
+  @keyframes trailPulse{ 0%,100%{ box-shadow:0 0 0 3px rgba(79,214,160,0.28); } 50%{ box-shadow:0 0 0 7px rgba(79,214,160,0.12); } }
+  .trailCaption{ font-size:12.5px; font-weight:700; color:#cfe4f7; }
+  .trailCaption.checkpoint{ color:var(--gold); }
 
   .iconChip{ cursor:pointer; font-size:16px; padding:6px 11px; }
   .iconChip:active{ background:rgba(255,255,255,0.25); }
@@ -449,11 +487,15 @@
     </div>
 
     <div id="touchControls">
-      <div class="padBtn" id="btnLeft">◀</div>
-      <div class="padBtn dodgeBtn" id="btnDodge">⤒</div>
-      <div class="padBtn shootBtn hidden" id="btnShoot">🔫</div>
-      <div class="padBtn diveBtn" id="btnDive">⬇</div>
-      <div class="padBtn" id="btnRight">▶</div>
+      <div class="ctrlGroup ctrlLeft">
+        <div class="padBtn" id="btnLeft">◀</div>
+        <div class="padBtn" id="btnRight">▶</div>
+      </div>
+      <div class="ctrlGroup ctrlRight">
+        <div class="padBtn shootBtn hidden" id="btnShoot">🔫</div>
+        <div class="padBtn dodgeBtn" id="btnDodge">⤒</div>
+        <div class="padBtn diveBtn" id="btnDive">⬇</div>
+      </div>
     </div>
 
     <!-- INTRO / HOW TO PLAY -->
@@ -470,6 +512,13 @@
         <button class="secondary soundToggle" id="sound8bit" type="button">🎮 8-bit</button>
       </div>
 
+      <div class="rowPick">
+        <div class="pickLabel">Difficulty</div>
+        <button class="secondary soundToggle" id="diffNormal" type="button">🪂 Normal</button>
+        <button class="secondary soundToggle" id="diffEasy" type="button">🌈 Easy</button>
+      </div>
+      <div class="subtitle" id="diffHint" style="font-size:12px; margin-top:-6px;">Easy mode: slower fall, snappier steering, a landing guide line and a wider target.</div>
+
       <div class="loadoutRow">
         <div class="loadoutSlot"><div class="loadoutSwatch" id="loadoutChar"></div><span>Jumper</span></div>
         <div class="loadoutSlot"><div class="loadoutSwatch" id="loadoutChute"></div><span>Chute</span></div>
@@ -479,6 +528,7 @@
       <button class="secondary" id="openShopBtn">🛒 Open Shop</button>
 
       <button class="primary" id="startBtn">Start Jumping</button>
+      <span class="linkBtn hidden" id="restartFromOneLink">Start over from Level 1</span>
     </div>
 
     <!-- SHOP -->
@@ -526,6 +576,14 @@
       <div id="resultTitle">Nice Landing!</div>
       <div id="resultStars" class="stars"></div>
       <div id="resultSub">You stuck the landing on the target.</div>
+
+      <div id="progressTrail" class="progressTrail">
+        <div class="trailTrack"><div class="trailFill" id="trailFill"></div>
+          <div class="trailNodes" id="trailNodes"></div>
+        </div>
+        <div class="trailCaption" id="trailCaption"></div>
+      </div>
+
       <div id="resultCoins" class="hudChip" style="display:none;"></div>
       <button class="secondary shopLink hidden" id="watchAdDoubleBtn" style="border-color:var(--gold); color:var(--gold);">📺 Watch Ad to Double These Coins</button>
       <div class="linkBtn shopLink hidden" id="shopLink">🛒 Spend your coins in the Shop</div>
@@ -605,30 +663,48 @@ const SFX = (function(){
     ensure();
     planeStop();
     const t = ctx.currentTime;
-    const osc = ctx.createOscillator();
-    osc.type = 'sawtooth';
-    osc.frequency.value = 92;
-    const osc2 = ctx.createOscillator(); // second detuned layer for a fuller engine tone
-    osc2.type = 'square';
-    osc2.frequency.value = 46;
+
+    // Jet engine: white-noise turbine roar through a resonant bandpass that
+    // spools up, plus a high sawtooth turbine whine, plus a slow shimmer.
+    const noise = ctx.createBufferSource();
+    noise.buffer = noiseBuffer;
+    noise.loop = true;
+    const band = ctx.createBiquadFilter();
+    band.type = 'bandpass';
+    band.frequency.setValueAtTime(280, t);
+    band.frequency.linearRampToValueAtTime(880, t + 1.3);
+    band.Q.value = 1.3;
+    const lowpass = ctx.createBiquadFilter();
+    lowpass.type = 'lowpass';
+    lowpass.frequency.value = 2800;
+
+    const whine = ctx.createOscillator();
+    whine.type = 'sawtooth';
+    whine.frequency.setValueAtTime(1300, t);
+    whine.frequency.linearRampToValueAtTime(2150, t + 1.3);
+    const whineGain = ctx.createGain();
+    whineGain.gain.value = 0.011;
+
     const lfo = ctx.createOscillator();
-    lfo.frequency.value = 6.5;
+    lfo.frequency.value = 0.85;
     const lfoGain = ctx.createGain();
-    lfoGain.gain.value = 5;
-    lfo.connect(lfoGain).connect(osc.frequency);
+    lfoGain.gain.value = 130;
+    lfo.connect(lfoGain).connect(band.frequency);
+
     const gain = ctx.createGain();
     gain.gain.setValueAtTime(0.0001, t);
-    gain.gain.exponentialRampToValueAtTime(0.05, t+0.2);
-    const gain2 = ctx.createGain();
-    gain2.gain.value = 0.02;
-    osc.connect(gain).connect(ctx.destination);
-    osc2.connect(gain2).connect(gain).connect(ctx.destination);
-    osc.start(); osc2.start(); lfo.start();
-    plane = {osc, osc2, lfo, gain};
+    gain.gain.exponentialRampToValueAtTime(0.06, t + 0.4);
+
+    noise.connect(band).connect(lowpass).connect(gain).connect(ctx.destination);
+    whine.connect(whineGain).connect(gain);
+
+    noise.start(); whine.start(); lfo.start();
+    plane = { gain, sources:[noise, whine, lfo] };
   }
   function planeStop(){
     if(!plane) return;
-    fadeAndStop(plane.gain, [plane.osc, plane.osc2, plane.lfo], 0.15);
+    const sources = plane.sources || [plane.osc, plane.osc2, plane.lfo];
+    fadeAndStop(plane.gain, sources, plane.sources ? 0.25 : 0.15);
     plane = null;
   }
 
@@ -1105,14 +1181,21 @@ const CHAR_SUIT_FREE  = ['#ff6a3d','#4fd6a0','#7c9bff','#ff5f9e','#ffd166','#9b6
 const CHAR_LIST = buildCatalog(CHAR_SUIT_FREE, 30, 8, 12, 72, 56, 99, 40, 'Jumper')
   .map((it,i)=>({ ...it, skin: CHAR_SKIN_TONES[i % CHAR_SKIN_TONES.length] }));
 
+// Canopy silhouettes — cycled across the catalog so even the free chutes vary
+const CANOPY_SHAPES = ['dome','square','triangle','hex','ramair','scalloped'];
 const CHUTE_FREE = ['#ff6a3d','#4fd6a0','#ffd166','#7c9bff','#ff5f9e','#ffffff','#ff8a4c','#5be3c9'];
-const CHUTE_LIST = buildCatalog(CHUTE_FREE, 30, 8, 205, 82, 60, 79, 30, 'Canopy');
+const CHUTE_LIST = buildCatalog(CHUTE_FREE, 30, 8, 205, 82, 60, 79, 30, 'Canopy')
+  .map((it,i)=>({ ...it, shape: CANOPY_SHAPES[i % CANOPY_SHAPES.length] }));
 
 const PLANE_FREE = ['#3f6fae','#4fb8ea','#6fc7e6','#3aa7d0','#7c9bff','#5be3c9','#4c8fd6','#8ecae6'];
 const PLANE_LIST = buildCatalog(PLANE_FREE, 30, 8, 30, 68, 52, 149, 50, 'Flyer');
 
+// Blaster body shapes paired with a matching projectile style
+const BLASTER_SHAPES = ['pistol','raygun','rifle','cannon','smg'];
+const SHOT_STYLES    = ['bolt','ball','beam','wave','spread'];
 const GUN_FREE = ['#9aa3ad','#4c8fd6','#4fd6a0','#ff6a3d','#ffd166','#7c9bff','#ff5f9e','#5be3c9'];
-const GUN_LIST = buildCatalog(GUN_FREE, 30, 8, 15, 75, 54, 129, 45, 'Blaster');
+const GUN_LIST = buildCatalog(GUN_FREE, 30, 8, 15, 75, 54, 129, 45, 'Blaster')
+  .map((it,i)=>({ ...it, shape: BLASTER_SHAPES[i % BLASTER_SHAPES.length], shot: SHOT_STYLES[i % SHOT_STYLES.length] }));
 
 function activeAbilities(){
   return [CHAR_LIST[state.chosenChar], CHUTE_LIST[state.chosenChuteIdx], PLANE_LIST[state.chosenPlaneIdx], GUN_LIST[state.chosenGunIdx]]
@@ -1240,8 +1323,42 @@ function generateLevel(n){
 // ---------------------------------------------------------------
 // Game state
 // ---------------------------------------------------------------
+// ---------------------------------------------------------------
+// Persistent save — furthest level, easy-mode preference, coins.
+// Wrapped in try/catch so private-mode / blocked storage never breaks the game.
+// ---------------------------------------------------------------
+const SAVE_KEY = 'skydrop_save_v1';
+function loadSave(){
+  try { return JSON.parse(localStorage.getItem(SAVE_KEY)) || {}; }
+  catch { return {}; }
+}
+function persistSave(){
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify({
+      easyMode: !!state.easyMode,
+      maxCleared: state.maxCleared|0,
+      coins: state.coins|0
+    }));
+  } catch {}
+}
+const _save = loadSave();
+
+// The seven vehicle stages, each ending on the given level. The last level of
+// a stage is a checkpoint — clearing it lights that flag on the progress trail.
+const STAGES = [
+  { icon:'🎯', name:'Fixed Target',    end:8  },
+  { icon:'🚗', name:'Moving Car',      end:18 },
+  { icon:'🚐', name:'Delivery Van',    end:28 },
+  { icon:'🚚', name:'Long-Haul Truck', end:37 },
+  { icon:'🚂', name:'Speeding Train',  end:47 },
+  { icon:'⛵', name:'Bobbing Boat',    end:54 },
+  { icon:'🚢', name:'Cargo Ship',      end:60 }
+];
+
 let state = {
   level: 1,
+  easyMode: !!_save.easyMode,
+  maxCleared: _save.maxCleared|0,   // highest level number completed
   chosenChar: 0,
   chosenChuteIdx: 0,
   chosenPlaneIdx: 0,
@@ -1262,10 +1379,11 @@ let state = {
   coinFly: [],
   confetti: [],
   shotFx: [],
+  hitParticles: [],
   shootEnabled: false,
   camera: { scale:1, targetScale:1, panX:0, targetPanX:0, panY:0, targetPanY:0, shakeT:0, shakeMag:0, nudgeX:0, nudgeY:0, nudgeUntil:0, nudgeDuration:550 },
   jumpRequested: false,
-  coins: 0
+  coins: _save.coins|0
 };
 
 function makeObstacles(n){
@@ -1410,6 +1528,7 @@ function renderShop(){
     card.innerHTML =
       '<div class="shopSwatch" style="'+swatchStyle+'"></div>' +
       '<div class="shopName">'+item.name+'</div>' +
+      (item.shape ? '<div class="shopShape">'+item.shape+(item.shot ? ' · '+item.shot : '')+'</div>' : '') +
       (item.free
         ? '<div class="shopTag free">FREE</div>'
         : '<div class="shopTag premium">$'+item.price+'</div>') +
@@ -1569,12 +1688,46 @@ document.getElementById('sound8bit').addEventListener('click', ()=>{
   SFX.chuteOpen(); // quick preview blip so you can hear the style right away
 });
 
-document.getElementById('startBtn').addEventListener('click', ()=>{
+// ---- Difficulty (Easy mode) ----
+function setEasyMode(on){
+  state.easyMode = !!on;
+  document.getElementById('diffEasy').classList.toggle('selected', state.easyMode);
+  document.getElementById('diffNormal').classList.toggle('selected', !state.easyMode);
+  persistSave();
+}
+document.getElementById('diffNormal').addEventListener('click', ()=> setEasyMode(false));
+document.getElementById('diffEasy').addEventListener('click', ()=> setEasyMode(true));
+
+// Reflect saved progress on the start screen: a "Continue" button that resumes
+// at the furthest unlocked level, plus a link to start over from level 1.
+function syncStartScreen(){
+  setEasyMode(state.easyMode);
+  const resume = Math.min(60, (state.maxCleared|0) + 1);
+  const btn = document.getElementById('startBtn');
+  const restartLink = document.getElementById('restartFromOneLink');
+  if(state.maxCleared >= 60){
+    btn.textContent = '🏁 Play Again';
+    restartLink.classList.add('hidden');
+  } else if(state.maxCleared > 0){
+    btn.textContent = 'Continue · Level ' + resume;
+    restartLink.classList.remove('hidden');
+  } else {
+    btn.textContent = 'Start Jumping';
+    restartLink.classList.add('hidden');
+  }
+}
+syncStartScreen();
+
+function beginRun(fromLevel){
   SFX.ensure(); // audio needs a user gesture to unlock — this click is it
   startScreen.classList.add('hidden');
-  loadLevel(1);
+  loadLevel(fromLevel);
   running = true;
+}
+document.getElementById('startBtn').addEventListener('click', ()=>{
+  beginRun(state.maxCleared >= 60 ? 1 : Math.min(60, (state.maxCleared|0) + 1));
 });
+document.getElementById('restartFromOneLink').addEventListener('click', ()=> beginRun(1));
 document.getElementById('nextBtn').addEventListener('click', ()=>{
   resultScreen.classList.add('hidden');
   if(state.level >= 60){
@@ -1599,6 +1752,7 @@ function goHome(){
   winScreen.classList.add('hidden');
   updateCoinHud();
   renderLoadoutPreview();
+  syncStartScreen();
   startScreen.classList.remove('hidden');
 }
 document.getElementById('homeBtn').addEventListener('click', goHome);
@@ -1733,10 +1887,21 @@ function triggerShoot(){
     const d = Math.hypot(p.x-o.x, p.y-o.y);
     if(d < closestDist){ closestDist = d; closest = o; }
   });
-  p.shootCooldownUntil = now + 550;
-  if(!closest || closestDist > 260) { SFX.shootMiss(); return; } // fired, but nothing in range
+  p.shootCooldownUntil = now + 480;
+  const gun = GUN_LIST[state.chosenGunIdx];
+  const mx = p.x + 15, my = p.y - 30;
+  if(!closest || closestDist > 260){
+    // fired into empty air — still a muzzle flash and a few sparks
+    SFX.shootMiss();
+    state.shotFx.push({ fromX:mx, fromY:my, toX:mx + 90, toY:my - 30, start:now, duration:120, color:gun.color, style:gun.shot, whiff:true });
+    spawnHitBurst(mx + 60, my - 20, gun.color, 5);
+    return;
+  }
   state.obstacles = state.obstacles.filter(o => o !== closest);
-  state.shotFx.push({ fromX:p.x, fromY:p.y-10, toX:closest.x, toY:closest.y, start:now, duration:140, color: GUN_LIST[state.chosenGunIdx].color });
+  const dur = gun.shot === 'ball' ? 300 : gun.shot === 'wave' ? 260 : gun.shot === 'beam' ? 200 : 150;
+  state.shotFx.push({ fromX:mx, fromY:my, toX:closest.x, toY:closest.y, start:now, duration:dur, color: gun.color, style: gun.shot });
+  spawnHitBurst(closest.x, closest.y, gun.color, 16);
+  state.camera.shakeT = 90; state.camera.shakeMag = 2.4;
   SFX.shootHit();
 }
 const btnDodgeEl = document.getElementById('btnDodge');
@@ -1866,7 +2031,7 @@ function update(dt){
     // Expressed in the same "px per 60fps frame" unit as everything else,
     // so it lands in 3–4.5 real seconds regardless of device frame rate.
     const remaining = (GROUND_Y - 6) - p.y;
-    const targetSeconds = 3 + Math.random()*1.5;
+    const targetSeconds = 3 + Math.random()*1.5 + (state.easyMode ? 2 : 0);
     p.glideVy = remaining / (targetSeconds * 60);
     // Shield only matters once levels get hectic — none in the easy levels,
     // ramping up gradually as obstacles get more common in harder levels.
@@ -1892,13 +2057,14 @@ function update(dt){
     const flareZone = 90;
     const flareFactor = remaining < flareZone ? Math.max(0.4, remaining/flareZone) : 1;
     p.vy = baseVy * flareFactor;
-    const accel = 0.16 * dtScale;
+    const accel = (state.easyMode ? 0.26 : 0.16) * dtScale;
     if(state.keys.left) p.vx -= accel;
     if(state.keys.right) p.vx += accel;
     p.vx *= Math.pow(0.94, dtScale);
-    p.vx = Math.max(-3.2, Math.min(3.2, p.vx));
-    // wind drift
-    p.vx += Math.sin(state.windPhase)*cfg.wind*0.15*dtScale;
+    const vxCap = state.easyMode ? 4.4 : 3.2;
+    p.vx = Math.max(-vxCap, Math.min(vxCap, p.vx));
+    // wind drift — much gentler in easy mode
+    p.vx += Math.sin(state.windPhase)*cfg.wind*0.15*dtScale*(state.easyMode ? 0.3 : 1);
     SFX.windSetIntensity(Math.abs(p.vx)/3.2 + (diving ? 0.5 : 0));
   }
 
@@ -1907,7 +2073,11 @@ function update(dt){
   if(p.y < p.openAt-70) p.y = p.openAt-70; // dodge hop can't overshoot too far up
   p.legAngle = Math.sin(performance.now()/120)*0.2;
 
-  const margin = 22;
+  // Once the chute is open, keep the whole canopy on screen (it spans about
+  // ±46, more with the depth scale) — not just the body. A jumper pinned to
+  // the very edge by plane momentum was showing a clipped strip of chute
+  // colour running down the screen edge.
+  const margin = p.chuteOpen ? 64 : 24;
   if(p.x < margin) { p.x = margin; p.vx = 0; }
   if(p.x > W-margin) { p.x = W-margin; p.vx = 0; }
 
@@ -1929,7 +2099,7 @@ function crashObstacle(o){
   state.phase = 'crashed';
   running = false;
   stopTutorial();
-  state.camera.shakeT = 200; state.camera.shakeMag = 5;
+  state.camera.shakeT = 160; state.camera.shakeMag = 3;
   SFX.windStop();
   SFX.obstacleHit();
   draw();
@@ -1944,6 +2114,7 @@ function crashObstacle(o){
     resultSub.textContent = 'You clipped a ' + (o.type==='bird'?'bird':o.type==='bee'?'bee':'balloon') + ' mid-air. Steer around them next time.';
     resultStars.innerHTML = '';
     resultCoins.style.display = 'none';
+    document.getElementById('progressTrail').style.display = 'none';
     nextBtn.classList.add('hidden');
     document.getElementById('retryBtn').classList.remove('secondary');
     document.getElementById('retryBtn').classList.add('primary');
@@ -1965,6 +2136,38 @@ function renderStars(container, count){
   let html = '';
   for(let i=0;i<3;i++){ html += '<span class="'+(i<count?'on':'off')+'">★</span>'; }
   container.innerHTML = html;
+}
+
+// The checkpoint trail on the result screen: seven vehicle-stage nodes, a fill
+// bar up to the furthest level cleared, and a caption about the next checkpoint.
+function renderProgressTrail(justCleared){
+  const cleared = state.maxCleared|0;
+  const nodesEl = document.getElementById('trailNodes');
+  const fillEl = document.getElementById('trailFill');
+  const capEl = document.getElementById('trailCaption');
+
+  const currentStage = STAGES.findIndex(s => cleared < s.end);
+  nodesEl.innerHTML = STAGES.map((s, i) => {
+    const done = cleared >= s.end;
+    const cls = done ? 'trailNode done' : (i === currentStage ? 'trailNode current' : 'trailNode');
+    return '<div class="'+cls+'" title="'+s.name+' (to Lv '+s.end+')">'+(done ? '✓' : s.icon)+'</div>';
+  }).join('');
+
+  fillEl.style.width = (90 * Math.max(0, Math.min(1, cleared / 60))) + '%';
+
+  const hitCheckpoint = justCleared && STAGES.some(s => s.end === cleared);
+  if(cleared >= 60){
+    capEl.textContent = '🏁 All 60 levels cleared!';
+    capEl.className = 'trailCaption checkpoint';
+  } else if(hitCheckpoint){
+    const s = STAGES.find(x => x.end === cleared);
+    capEl.textContent = '🚩 Checkpoint! ' + s.name + ' complete';
+    capEl.className = 'trailCaption checkpoint';
+  } else {
+    const s = STAGES[currentStage];
+    capEl.textContent = (s.end - cleared) + ' more to the ' + s.name + ' checkpoint';
+    capEl.className = 'trailCaption';
+  }
 }
 
 function spawnConfetti(x, y){
@@ -2058,13 +2261,18 @@ function landCheck(){
   const p = state.player;
   const t = state.target;
   const dx = Math.abs(p.x - t.x);
-  const success = p.chuteOpen && dx <= cfg.halfWidth;
+  const landTolerance = cfg.halfWidth * (state.easyMode ? 1.6 : 1);
+  const success = p.chuteOpen && dx <= landTolerance;
 
   state.phase = success ? 'landed' : 'crashed';
   running = false;
   stopTutorial();
-  state.camera.shakeT = success ? 140 : 220;
-  state.camera.shakeMag = success ? 3 : 6;
+  if(success && state.level > state.maxCleared){
+    state.maxCleared = state.level;
+    persistSave();
+  }
+  state.camera.shakeT = success ? 120 : 170;
+  state.camera.shakeMag = success ? 2 : 3.5;
   SFX.windStop();
   SFX.landingThump();
   if(!success){
@@ -2118,6 +2326,8 @@ function landCheck(){
         renderStars(resultStars, stars);
         resultCoins.textContent = '🪙 +' + coinsEarned + '  (total ' + state.coins + ')';
         resultCoins.style.display = 'inline-block';
+        renderProgressTrail(true);
+        document.getElementById('progressTrail').style.display = 'flex';
         nextBtn.classList.remove('hidden');
         document.getElementById('retryBtn').classList.remove('primary');
         document.getElementById('retryBtn').classList.add('secondary');
@@ -2137,6 +2347,7 @@ function landCheck(){
       resultSub.textContent = p.chuteOpen ? 'You landed ' + Math.round(dx) + 'px off target. Steer earlier next time.' : 'You hit the ground before opening your chute.';
       resultStars.innerHTML = '';
       resultCoins.style.display = 'none';
+      document.getElementById('progressTrail').style.display = 'none';
       nextBtn.classList.add('hidden');
       document.getElementById('retryBtn').classList.remove('secondary');
       document.getElementById('retryBtn').classList.add('primary');
@@ -2495,6 +2706,168 @@ function roundRect(x,y,w,h,r){
   ctx.closePath();
 }
 
+// Easy-mode aid: a dashed line from the jumper to a predicted touchdown spot,
+// so you can line the marker up with the target's centre.
+function drawLandingGuide(p){
+  if(!p.chuteOpen) return;
+  const vy = Math.max(0.001, p.vy);
+  const framesToGround = ((GROUND_Y - 6) - p.y) / vy;
+  let predX = p.x + p.vx * Math.min(framesToGround, 40) * 0.5;
+  predX = Math.max(22, Math.min(W - 22, predX));
+
+  ctx.save();
+  ctx.strokeStyle = 'rgba(79,214,160,0.85)';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([6, 6]);
+  ctx.beginPath();
+  ctx.moveTo(p.x, p.y + 8);
+  ctx.lineTo(predX, GROUND_Y - 4);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.beginPath();
+  ctx.arc(predX, GROUND_Y - 4, 7, 0, Math.PI*2);
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(79,214,160,0.30)';
+  ctx.fill();
+  ctx.restore();
+}
+
+// Parachute canopy — drawn in the jumper's local space (harness at ±9,-14,
+// canopy rim around y=-70). `chute.shape` picks the silhouette.
+function drawCanopy(chute, now){
+  const color = chute.color;
+  const shape = chute.shape || 'dome';
+  const bt = Math.sin(now/260)*4;       // billow at the crown
+  const bb = Math.sin(now/260+1.4)*3;   // billow along the hem
+  const rimY = -70;
+  const hw = shape === 'ramair' ? 52 : 46;
+
+  // shroud lines from the harness up to the canopy edges
+  ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+  ctx.lineWidth = 1.4;
+  ctx.beginPath(); ctx.moveTo(-9,-14); ctx.lineTo(-hw*0.86, rimY); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(9,-14);  ctx.lineTo(hw*0.86, rimY);  ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-9,-14); ctx.lineTo(-hw*0.22, rimY); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(9,-14);  ctx.lineTo(hw*0.22, rimY);  ctx.stroke();
+
+  ctx.fillStyle = color;
+  ctx.strokeStyle = 'rgba(0,0,0,0.16)';
+  ctx.lineWidth = 1.5;
+
+  switch(shape){
+    case 'square': {
+      ctx.beginPath();
+      ctx.moveTo(-hw, rimY);
+      ctx.lineTo(-hw+6, rimY-30-bt);
+      ctx.lineTo(hw-6, rimY-30-bt);
+      ctx.lineTo(hw, rimY);
+      ctx.quadraticCurveTo(0, rimY-10+bb, -hw, rimY);
+      ctx.closePath(); ctx.fill();
+      for(let i=-1;i<=1;i++){ ctx.beginPath(); ctx.moveTo(i*hw*0.5, rimY); ctx.lineTo(i*hw*0.5, rimY-28-bt); ctx.stroke(); }
+      break;
+    }
+    case 'triangle': {
+      ctx.beginPath();
+      ctx.moveTo(-hw, rimY);
+      ctx.lineTo(0, rimY-46-bt);
+      ctx.lineTo(hw, rimY);
+      ctx.quadraticCurveTo(0, rimY-9+bb, -hw, rimY);
+      ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(0, rimY); ctx.lineTo(0, rimY-42-bt); ctx.stroke();
+      break;
+    }
+    case 'hex': {
+      ctx.beginPath();
+      ctx.moveTo(-hw, rimY-4);
+      ctx.lineTo(-hw*0.5, rimY-40-bt);
+      ctx.lineTo(hw*0.5, rimY-40-bt);
+      ctx.lineTo(hw, rimY-4);
+      ctx.quadraticCurveTo(0, rimY-8+bb, -hw, rimY-4);
+      ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(-hw*0.5, rimY-4); ctx.lineTo(-hw*0.5, rimY-38-bt); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(hw*0.5, rimY-4); ctx.lineTo(hw*0.5, rimY-38-bt); ctx.stroke();
+      break;
+    }
+    case 'ramair': {
+      roundRect(-hw, rimY-20-bt, hw*2, 22, 6); ctx.fill();
+      for(let i=-3;i<=3;i++){ ctx.beginPath(); ctx.moveTo(i*hw*0.28, rimY-20-bt); ctx.lineTo(i*hw*0.28, rimY+1); ctx.stroke(); }
+      break;
+    }
+    case 'scalloped': {
+      ctx.beginPath();
+      ctx.moveTo(-hw, rimY);
+      ctx.quadraticCurveTo(0, rimY-50+bt, hw, rimY);
+      const n = 4;
+      for(let i=0;i<n;i++){
+        const x0 = hw - (i*2*hw/n);
+        const x1 = hw - ((i+1)*2*hw/n);
+        ctx.quadraticCurveTo((x0+x1)/2, rimY+9+bb, x1, rimY);
+      }
+      ctx.closePath(); ctx.fill();
+      break;
+    }
+    default: { // dome — the original billowing half-round
+      ctx.beginPath();
+      ctx.moveTo(-hw, rimY);
+      ctx.quadraticCurveTo(0, rimY-48+bt, hw, rimY);
+      ctx.quadraticCurveTo(0, rimY-14+bb, -hw, rimY);
+      ctx.closePath(); ctx.fill();
+      for(let i=-2;i<=2;i++){
+        ctx.beginPath();
+        ctx.moveTo(i*18, rimY + Math.abs(i)*3);
+        ctx.quadraticCurveTo(i*9, rimY-30+bt*0.5, 0, rimY-34+bt*0.5);
+        ctx.stroke();
+      }
+    }
+  }
+}
+
+// Blaster held in the jumper's right hand while the shoot control is available.
+function drawBlaster(gun){
+  const color = gun.color;
+  const shape = gun.shape || 'pistol';
+  ctx.save();
+  ctx.translate(15, -33);
+  ctx.rotate(0.18);
+  ctx.lineJoin = 'round';
+  switch(shape){
+    case 'rifle': {
+      ctx.fillStyle = '#3a3f4a'; roundRect(-2,-3,22,6,2); ctx.fill();
+      ctx.fillStyle = color;     roundRect(13,-4,10,8,2); ctx.fill();
+      ctx.fillStyle = '#2a2e37'; roundRect(-1,2,6,7,1); ctx.fill();
+      break;
+    }
+    case 'raygun': {
+      ctx.fillStyle = color;
+      ctx.beginPath(); ctx.ellipse(6,0,10,6,0,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#e9f6ff'; roundRect(13,-2.5,9,5,2); ctx.fill();
+      ctx.fillStyle = '#2a2e37'; roundRect(1,4,5,7,1); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.6)';
+      ctx.beginPath(); ctx.arc(3,-2,2,0,Math.PI*2); ctx.fill();
+      break;
+    }
+    case 'cannon': {
+      ctx.fillStyle = '#41474f'; roundRect(-3,-6,14,12,3); ctx.fill();
+      ctx.fillStyle = color;     roundRect(9,-5,14,10,3); ctx.fill();
+      ctx.fillStyle = '#23272e'; roundRect(0,5,7,8,1); ctx.fill();
+      break;
+    }
+    case 'smg': {
+      ctx.fillStyle = '#33373f'; roundRect(-3,-3,16,6,2); ctx.fill();
+      ctx.fillStyle = color;     roundRect(9,-3.5,6,7,1); ctx.fill();
+      ctx.fillStyle = '#23272e'; roundRect(-1,2,5,6,1); ctx.fill();
+      roundRect(2,3,3,9,1); ctx.fill();
+      break;
+    }
+    default: { // pistol
+      ctx.fillStyle = color;     roundRect(0,-3,14,6,2); ctx.fill();
+      ctx.fillStyle = '#2a2e37'; roundRect(1,2,5,7,1); ctx.fill();
+      ctx.fillStyle = '#e9f6ff'; roundRect(11,-2,4,4,1); ctx.fill();
+    }
+  }
+  ctx.restore();
+}
+
 function drawPlayer(p){
   const skin = CHAR_LIST[state.chosenChar].skin;
   const suit = CHAR_LIST[state.chosenChar].color;
@@ -2550,31 +2923,7 @@ function drawPlayer(p){
   }
 
   if(p.chuteOpen && !celebrating){
-    // shroud lines
-    ctx.strokeStyle='rgba(255,255,255,0.7)';
-    ctx.lineWidth=1.4;
-    ctx.beginPath(); ctx.moveTo(-9,-14); ctx.lineTo(-40,-70); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(9,-14); ctx.lineTo(40,-70); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(-9,-14); ctx.lineTo(0,-70); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(9,-14); ctx.lineTo(0,-70); ctx.stroke();
-
-    // canopy — the dome gently billows like real fabric catching air
-    const billowTop = Math.sin(now/260)*4;
-    const billowBottom = Math.sin(now/260+1.4)*3;
-    ctx.fillStyle = chute;
-    ctx.beginPath();
-    ctx.moveTo(-46,-70);
-    ctx.quadraticCurveTo(0,-118+billowTop, 46,-70);
-    ctx.quadraticCurveTo(0,-84+billowBottom, -46,-70);
-    ctx.closePath();
-    ctx.fill();
-    ctx.strokeStyle='rgba(0,0,0,0.15)'; ctx.lineWidth=1.5;
-    for(let i=-2;i<=2;i++){
-      ctx.beginPath();
-      ctx.moveTo(i*18,-70+ (Math.abs(i)*3));
-      ctx.quadraticCurveTo(i*9,-100+billowTop*0.5, 0,-104+billowTop*0.5);
-      ctx.stroke();
-    }
+    drawCanopy(CHUTE_LIST[state.chosenChuteIdx], now);
   } else if(celebrating && celebrateElapsed < 450){
     // the canopy collapses and drifts away the instant you touch down —
     // you visibly exit the glide instead of just standing there still rigged up
@@ -2618,6 +2967,11 @@ function drawPlayer(p){
     const armA = p.chuteOpen ? -0.9 : -0.5;
     ctx.beginPath(); ctx.moveTo(0,-16); ctx.lineTo(-16, -16+armA*20); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(0,-16); ctx.lineTo(16, -16+armA*20); ctx.stroke();
+  }
+
+  // blaster in the right hand, once the shoot control is live
+  if(state.shootEnabled && p.chuteOpen && !celebrating && !dodging){
+    drawBlaster(GUN_LIST[state.chosenGunIdx]);
   }
 
   // torso
@@ -2734,27 +3088,169 @@ function drawObstacles(){
   });
 }
 
+// Impact debris — bright sparks that fly out from a hit and arc down.
+function spawnHitBurst(x, y, color, count){
+  const now = performance.now();
+  for(let i=0;i<count;i++){
+    const a = Math.random()*Math.PI*2;
+    const spd = 1.5 + Math.random()*4.5;
+    state.hitParticles.push({
+      x, y,
+      vx: Math.cos(a)*spd,
+      vy: Math.sin(a)*spd - 1,
+      color: Math.random() < 0.5 ? color : '#fff6d6',
+      size: 1.5 + Math.random()*2.5,
+      start: now,
+      duration: 320 + Math.random()*280
+    });
+  }
+  // a couple of chunky glowing embers
+  for(let i=0;i<3;i++){
+    const a = Math.random()*Math.PI*2;
+    state.hitParticles.push({
+      x, y, vx: Math.cos(a)*2.2, vy: Math.sin(a)*2.2 - 0.5,
+      color, size: 4 + Math.random()*2, glow:true,
+      start: now, duration: 260 + Math.random()*160
+    });
+  }
+}
+function updateAndDrawHitParticles(){
+  if(state.hitParticles.length === 0) return;
+  const now = performance.now();
+  state.hitParticles = state.hitParticles.filter(pt=>{
+    const el = now - pt.start;
+    if(el > pt.duration) return false;
+    const f = 1 - el/pt.duration;
+    const k = el/16.6667;
+    const px = pt.x + pt.vx*k;
+    const py = pt.y + pt.vy*k + 0.09*k*k;
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, f);
+    if(pt.glow){
+      ctx.shadowColor = pt.color; ctx.shadowBlur = 10;
+    }
+    ctx.fillStyle = pt.color;
+    ctx.beginPath();
+    ctx.arc(px, py, pt.size*f + 0.5, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+    return true;
+  });
+}
+
 function drawShotFx(){
   if(state.shotFx.length===0) return;
   const now = performance.now();
   state.shotFx = state.shotFx.filter(s=>{
     const elapsed = now - s.start;
     if(elapsed > s.duration) return false;
-    const fade = 1 - elapsed/s.duration;
+    const t = elapsed / s.duration;      // 0..1
+    const fade = 1 - t;
+    const style = s.style || 'bolt';
+    const ang = Math.atan2(s.toY - s.fromY, s.toX - s.fromX);
+    const dist = Math.hypot(s.toX - s.fromX, s.toY - s.fromY);
+    let showBurst = !s.whiff;
     ctx.save();
-    ctx.globalAlpha = Math.max(0, fade);
-    ctx.strokeStyle = s.color;
-    ctx.lineWidth = 3;
     ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(s.fromX, s.fromY);
-    ctx.lineTo(s.toX, s.toY);
-    ctx.stroke();
-    // small burst at the impact point
-    ctx.fillStyle = '#fff6d6';
-    ctx.beginPath();
-    ctx.arc(s.toX, s.toY, 5*fade+2, 0, Math.PI*2);
-    ctx.fill();
+    ctx.lineJoin = 'round';
+    ctx.shadowColor = s.color;
+    ctx.shadowBlur = 14;
+
+    // muzzle flash — a bright spiky star at the barrel for the first instant
+    if(t < 0.4){
+      const mf = 1 - t/0.4;
+      ctx.save();
+      ctx.globalAlpha = mf;
+      ctx.translate(s.fromX, s.fromY);
+      ctx.rotate(ang);
+      ctx.fillStyle = '#fff6d6';
+      ctx.beginPath();
+      for(let i=0;i<8;i++){
+        const r = (i%2 ? 4 : 13) * (0.6 + mf*0.6);
+        const aa = i/8*Math.PI*2;
+        const fx = Math.cos(aa)*r, fy = Math.sin(aa)*r;
+        i ? ctx.lineTo(fx,fy) : ctx.moveTo(fx,fy);
+      }
+      ctx.closePath(); ctx.fill();
+      ctx.restore();
+    }
+
+    if(style === 'beam'){
+      // jagged lightning bolt, flickering thickness, glowing
+      const segs = 7;
+      const flick = 0.7 + Math.random()*0.6;
+      const path = [];
+      for(let i=0;i<=segs;i++){
+        const u = i/segs;
+        const jitter = (i===0||i===segs) ? 0 : (Math.random()*2-1)*12;
+        path.push([
+          s.fromX + (s.toX-s.fromX)*u - Math.sin(ang)*jitter,
+          s.fromY + (s.toY-s.fromY)*u + Math.cos(ang)*jitter
+        ]);
+      }
+      ctx.globalAlpha = Math.max(0, fade);
+      ctx.strokeStyle = s.color; ctx.lineWidth = 9*flick;
+      ctx.beginPath(); path.forEach((p,i)=> i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.stroke();
+      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3*flick;
+      ctx.beginPath(); path.forEach((p,i)=> i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.stroke();
+    } else if(style === 'ball'){
+      // comet: glowing head + tapering trail
+      const tt = Math.min(1, t * 1.2);
+      const bx = s.fromX + (s.toX - s.fromX) * tt;
+      const by = s.fromY + (s.toY - s.fromY) * tt;
+      ctx.globalAlpha = 0.5*fade + 0.3;
+      ctx.strokeStyle = s.color; ctx.lineWidth = 10;
+      ctx.beginPath();
+      ctx.moveTo(bx - Math.cos(ang)*44, by - Math.sin(ang)*44);
+      ctx.lineTo(bx, by); ctx.stroke();
+      ctx.globalAlpha = 0.4;
+      ctx.fillStyle = s.color;
+      ctx.beginPath(); ctx.arc(bx, by, 11, 0, Math.PI*2); ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = '#fff6d6';
+      ctx.beginPath(); ctx.arc(bx, by, 5.5, 0, Math.PI*2); ctx.fill();
+      // orbiting sparks
+      for(let i=0;i<3;i++){
+        const oa = now/50 + i*2.1;
+        ctx.beginPath(); ctx.arc(bx + Math.cos(oa)*10, by + Math.sin(oa)*10, 1.8, 0, Math.PI*2); ctx.fill();
+      }
+      showBurst = tt >= 1 && !s.whiff;
+    } else if(style === 'spread'){
+      ctx.globalAlpha = Math.max(0, fade);
+      ctx.strokeStyle = s.color; ctx.lineWidth = 3;
+      for(const off of [-0.34,-0.17, 0, 0.17, 0.34]){
+        ctx.beginPath();
+        ctx.moveTo(s.fromX, s.fromY);
+        ctx.lineTo(s.fromX + Math.cos(ang+off)*dist, s.fromY + Math.sin(ang+off)*dist);
+        ctx.stroke();
+      }
+    } else if(style === 'wave'){
+      ctx.globalAlpha = Math.max(0, fade*0.9);
+      ctx.strokeStyle = s.color;
+      for(let r=0;r<3;r++){
+        const rad = 6 + (t - r*0.12)*dist*1.1;
+        if(rad < 1) continue;
+        ctx.lineWidth = 5 - r*1.4;
+        ctx.beginPath();
+        ctx.arc(s.fromX, s.fromY, rad, ang - 0.75, ang + 0.75);
+        ctx.stroke();
+      }
+    } else { // bolt — thick glowing tracer + white core
+      ctx.globalAlpha = Math.max(0, fade);
+      ctx.strokeStyle = s.color; ctx.lineWidth = 7;
+      ctx.beginPath(); ctx.moveTo(s.fromX, s.fromY); ctx.lineTo(s.toX, s.toY); ctx.stroke();
+      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.moveTo(s.fromX, s.fromY); ctx.lineTo(s.toX, s.toY); ctx.stroke();
+    }
+
+    if(showBurst){
+      // impact flash ring
+      ctx.globalAlpha = Math.max(0, fade);
+      ctx.strokeStyle = '#fff6d6'; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.arc(s.toX, s.toY, 6 + t*22, 0, Math.PI*2); ctx.stroke();
+      ctx.fillStyle = '#fff6d6';
+      ctx.beginPath(); ctx.arc(s.toX, s.toY, 6*fade + 2, 0, Math.PI*2); ctx.fill();
+    }
     ctx.restore();
     return true;
   });
@@ -2858,25 +3354,25 @@ function updateCamera(){
   const phase = state.phase;
   if(phase==='plane'){
     // steady front-on establishing shot, drifting gently to keep the plane in frame
-    ts = 0.92;
-    tpx = state.plane ? (state.plane.x - W/2) * 0.07 : 0;
-    tpy = -14;
+    ts = 0.94;
+    tpx = state.plane ? (state.plane.x - W/2) * 0.04 : 0;
+    tpy = -12;
   } else if(phase==='falling'){
-    // punch in tight for the dramatic dive the instant you jump, already
-    // leaning toward the target so the landing zone starts entering frame
-    ts = 1.12;
-    tpy = 18;
-    if(state.player && state.target) tpx = Math.max(-35, Math.min(35, (state.target.x - state.player.x) * 0.12));
+    // a small punch-in for the dive — kept close to the glide framing so the
+    // cut when the chute opens is barely noticeable
+    ts = 1.05;
+    tpy = 12;
+    if(state.player && state.target) tpx = Math.max(-16, Math.min(16, (state.target.x - state.player.x) * 0.06));
   } else if(phase==='open'){
-    // chase-cam from behind, looking ahead toward the target — pulled back
-    // out for a clear gameplay framing so you can see where you're steering
+    // steady gameplay framing — only a gentle lean toward the target so
+    // steering left/right doesn't swing the whole world around
     ts = 1.0;
     tpy = 4;
-    if(state.player && state.target) tpx = Math.max(-40, Math.min(40, (state.target.x - state.player.x) * 0.16));
+    if(state.player && state.target) tpx = Math.max(-20, Math.min(20, (state.target.x - state.player.x) * 0.07));
   } else if(phase==='landed' || phase==='crashed'){
-    // close-up on the touchdown moment
-    ts = 1.16;
-    tpy = 14;
+    // a mild close-up on the touchdown moment
+    ts = 1.06;
+    tpy = 10;
   }
 
   // Level-1 activity: the camera itself demonstrates each control the
@@ -2890,9 +3386,10 @@ function updateCamera(){
   }
 
   cam.targetScale = ts; cam.targetPanX = tpx; cam.targetPanY = tpy;
-  cam.scale += (cam.targetScale - cam.scale) * 0.06;
-  cam.panX  += (cam.targetPanX  - cam.panX)  * 0.06;
-  cam.panY  += (cam.targetPanY  - cam.panY)  * 0.06;
+  // slower easing = a calmer, more stable camera that doesn't chase every input
+  cam.scale += (cam.targetScale - cam.scale) * 0.045;
+  cam.panX  += (cam.targetPanX  - cam.panX)  * 0.035;
+  cam.panY  += (cam.targetPanY  - cam.panY)  * 0.04;
   if(cam.shakeT > 0) cam.shakeT = Math.max(0, cam.shakeT - 16);
 }
 function triggerCameraNudge(dx, dy){
@@ -2930,6 +3427,7 @@ function draw(){
   drawTarget(cfg, state.target);
   drawObstacles();
   drawShotFx();
+  updateAndDrawHitParticles();
   drawPlane(state.plane);
   // While still aboard, show a small silhouette riding inside the doorway
   // instead of the full body — the old version drew the whole character
@@ -2938,18 +3436,33 @@ function draw(){
   if(state.phase==='plane'){
     drawPlaneRider(state.plane);
   } else {
+    if(state.easyMode && (state.phase==='falling' || state.phase==='open')) drawLandingGuide(state.player);
     drawPlayer(state.player);
   }
   ctx.restore();
 
-  // altitude bar — drawn outside the camera transform so it stays put on screen
-  const p = state.player;
-  const spanTop = (p.startY ?? 40);
-  const pct = Math.max(0, Math.min(1, (GROUND_Y - p.y) / (GROUND_Y - spanTop)));
-  ctx.fillStyle='rgba(255,255,255,0.15)';
-  ctx.fillRect(W-26,20,10,GROUND_Y-40);
-  ctx.fillStyle='#ffd166';
-  ctx.fillRect(W-26, 20+(GROUND_Y-40)*(1-pct), 10, (GROUND_Y-40)*pct);
+  // altitude gauge — screen-fixed, drawn outside the camera transform. Kept as
+  // a short rounded meter tucked under the HUD so it reads as a UI element, not
+  // a stray coloured line running the full height of the screen edge.
+  if(state.phase === 'falling' || state.phase === 'open'){
+    const p = state.player;
+    const spanTop = (p.startY ?? 40);
+    const pct = Math.max(0, Math.min(1, (GROUND_Y - p.y) / (GROUND_Y - spanTop)));
+    const gx = W - 20, gw = 6, gy = 96;
+    const gh = Math.min(GROUND_Y - gy - 150, 210);
+    ctx.fillStyle = 'rgba(10,20,40,0.32)';
+    roundRect(gx - 4, gy - 7, gw + 8, gh + 14, 7); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.28)';
+    roundRect(gx, gy, gw, gh, 3); ctx.fill();
+    const fillH = Math.max(3, gh * pct);
+    ctx.fillStyle = '#ffd166';
+    roundRect(gx, gy + gh - fillH, gw, fillH, 3); ctx.fill();
+    const my = gy + gh - fillH;
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.moveTo(gx - 4, my); ctx.lineTo(gx - 10, my - 4); ctx.lineTo(gx - 10, my + 4);
+    ctx.closePath(); ctx.fill();
+  }
 
   updateAndDrawCoinFly();
   updateAndDrawConfetti();
@@ -2998,6 +3511,10 @@ function frame(ts){
 }
 updateCoinHud();
 requestAnimationFrame(frame);
+
+if(location.search.includes('debug')){
+  window.__dbg = { state, get p(){return state.player;}, get t(){return state.target;}, renderProgressTrail, setEasyMode, loadLevel, triggerShoot, spawnHitBurst };
+}
 
 })();
 </script>
