@@ -390,6 +390,38 @@
   .stars .on{ color:var(--gold); text-shadow:0 2px 4px rgba(0,0,0,0.4); }
   .stars .off{ color:rgba(255,255,255,0.2); }
 
+  /* ---------- Level progress trail (result screen) ---------- */
+  .progressTrail{ width:100%; max-width:400px; display:flex; flex-direction:column; gap:8px; }
+  .trailTrack{ position:relative; height:34px; }
+  .trailTrack::before{
+    content:''; position:absolute; left:5%; right:5%; top:50%; height:4px;
+    transform:translateY(-50%); border-radius:2px;
+    background:rgba(255,255,255,0.14);
+  }
+  .trailFill{
+    position:absolute; left:5%; top:50%; height:4px;
+    transform:translateY(-50%); border-radius:2px;
+    background:linear-gradient(90deg, var(--gold), var(--orange));
+    transition:width 0.5s ease;
+  }
+  .trailNodes{ position:absolute; inset:0; display:flex; justify-content:space-between; padding:0 calc(5% - 13px); }
+  .trailNode{
+    width:26px; height:26px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:13px; line-height:1;
+    background:var(--panel); border:2px solid rgba(255,255,255,0.18);
+    filter:grayscale(0.7); opacity:0.5;
+  }
+  .trailNode.done{ filter:none; opacity:1; border-color:var(--gold); background:rgba(255,209,102,0.2); }
+  .trailNode.current{
+    filter:none; opacity:1; border-color:var(--mint);
+    box-shadow:0 0 0 4px rgba(79,214,160,0.25);
+    animation:trailPulse 1.2s ease-in-out infinite;
+  }
+  @keyframes trailPulse{ 0%,100%{ box-shadow:0 0 0 3px rgba(79,214,160,0.28); } 50%{ box-shadow:0 0 0 7px rgba(79,214,160,0.12); } }
+  .trailCaption{ font-size:12.5px; font-weight:700; color:#cfe4f7; }
+  .trailCaption.checkpoint{ color:var(--gold); }
+
   .iconChip{ cursor:pointer; font-size:16px; padding:6px 11px; }
   .iconChip:active{ background:rgba(255,255,255,0.25); }
 
@@ -470,6 +502,13 @@
         <button class="secondary soundToggle" id="sound8bit" type="button">🎮 8-bit</button>
       </div>
 
+      <div class="rowPick">
+        <div class="pickLabel">Difficulty</div>
+        <button class="secondary soundToggle" id="diffNormal" type="button">🪂 Normal</button>
+        <button class="secondary soundToggle" id="diffEasy" type="button">🌈 Easy</button>
+      </div>
+      <div class="subtitle" id="diffHint" style="font-size:12px; margin-top:-6px;">Easy mode: slower fall, snappier steering, a landing guide line and a wider target.</div>
+
       <div class="loadoutRow">
         <div class="loadoutSlot"><div class="loadoutSwatch" id="loadoutChar"></div><span>Jumper</span></div>
         <div class="loadoutSlot"><div class="loadoutSwatch" id="loadoutChute"></div><span>Chute</span></div>
@@ -479,6 +518,7 @@
       <button class="secondary" id="openShopBtn">🛒 Open Shop</button>
 
       <button class="primary" id="startBtn">Start Jumping</button>
+      <span class="linkBtn hidden" id="restartFromOneLink">Start over from Level 1</span>
     </div>
 
     <!-- SHOP -->
@@ -526,6 +566,14 @@
       <div id="resultTitle">Nice Landing!</div>
       <div id="resultStars" class="stars"></div>
       <div id="resultSub">You stuck the landing on the target.</div>
+
+      <div id="progressTrail" class="progressTrail">
+        <div class="trailTrack"><div class="trailFill" id="trailFill"></div>
+          <div class="trailNodes" id="trailNodes"></div>
+        </div>
+        <div class="trailCaption" id="trailCaption"></div>
+      </div>
+
       <div id="resultCoins" class="hudChip" style="display:none;"></div>
       <button class="secondary shopLink hidden" id="watchAdDoubleBtn" style="border-color:var(--gold); color:var(--gold);">📺 Watch Ad to Double These Coins</button>
       <div class="linkBtn shopLink hidden" id="shopLink">🛒 Spend your coins in the Shop</div>
@@ -1240,8 +1288,42 @@ function generateLevel(n){
 // ---------------------------------------------------------------
 // Game state
 // ---------------------------------------------------------------
+// ---------------------------------------------------------------
+// Persistent save — furthest level, easy-mode preference, coins.
+// Wrapped in try/catch so private-mode / blocked storage never breaks the game.
+// ---------------------------------------------------------------
+const SAVE_KEY = 'skydrop_save_v1';
+function loadSave(){
+  try { return JSON.parse(localStorage.getItem(SAVE_KEY)) || {}; }
+  catch { return {}; }
+}
+function persistSave(){
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify({
+      easyMode: !!state.easyMode,
+      maxCleared: state.maxCleared|0,
+      coins: state.coins|0
+    }));
+  } catch {}
+}
+const _save = loadSave();
+
+// The seven vehicle stages, each ending on the given level. The last level of
+// a stage is a checkpoint — clearing it lights that flag on the progress trail.
+const STAGES = [
+  { icon:'🎯', name:'Fixed Target',    end:8  },
+  { icon:'🚗', name:'Moving Car',      end:18 },
+  { icon:'🚐', name:'Delivery Van',    end:28 },
+  { icon:'🚚', name:'Long-Haul Truck', end:37 },
+  { icon:'🚂', name:'Speeding Train',  end:47 },
+  { icon:'⛵', name:'Bobbing Boat',    end:54 },
+  { icon:'🚢', name:'Cargo Ship',      end:60 }
+];
+
 let state = {
   level: 1,
+  easyMode: !!_save.easyMode,
+  maxCleared: _save.maxCleared|0,   // highest level number completed
   chosenChar: 0,
   chosenChuteIdx: 0,
   chosenPlaneIdx: 0,
@@ -1265,7 +1347,7 @@ let state = {
   shootEnabled: false,
   camera: { scale:1, targetScale:1, panX:0, targetPanX:0, panY:0, targetPanY:0, shakeT:0, shakeMag:0, nudgeX:0, nudgeY:0, nudgeUntil:0, nudgeDuration:550 },
   jumpRequested: false,
-  coins: 0
+  coins: _save.coins|0
 };
 
 function makeObstacles(n){
@@ -1569,12 +1651,46 @@ document.getElementById('sound8bit').addEventListener('click', ()=>{
   SFX.chuteOpen(); // quick preview blip so you can hear the style right away
 });
 
-document.getElementById('startBtn').addEventListener('click', ()=>{
+// ---- Difficulty (Easy mode) ----
+function setEasyMode(on){
+  state.easyMode = !!on;
+  document.getElementById('diffEasy').classList.toggle('selected', state.easyMode);
+  document.getElementById('diffNormal').classList.toggle('selected', !state.easyMode);
+  persistSave();
+}
+document.getElementById('diffNormal').addEventListener('click', ()=> setEasyMode(false));
+document.getElementById('diffEasy').addEventListener('click', ()=> setEasyMode(true));
+
+// Reflect saved progress on the start screen: a "Continue" button that resumes
+// at the furthest unlocked level, plus a link to start over from level 1.
+function syncStartScreen(){
+  setEasyMode(state.easyMode);
+  const resume = Math.min(60, (state.maxCleared|0) + 1);
+  const btn = document.getElementById('startBtn');
+  const restartLink = document.getElementById('restartFromOneLink');
+  if(state.maxCleared >= 60){
+    btn.textContent = '🏁 Play Again';
+    restartLink.classList.add('hidden');
+  } else if(state.maxCleared > 0){
+    btn.textContent = 'Continue · Level ' + resume;
+    restartLink.classList.remove('hidden');
+  } else {
+    btn.textContent = 'Start Jumping';
+    restartLink.classList.add('hidden');
+  }
+}
+syncStartScreen();
+
+function beginRun(fromLevel){
   SFX.ensure(); // audio needs a user gesture to unlock — this click is it
   startScreen.classList.add('hidden');
-  loadLevel(1);
+  loadLevel(fromLevel);
   running = true;
+}
+document.getElementById('startBtn').addEventListener('click', ()=>{
+  beginRun(state.maxCleared >= 60 ? 1 : Math.min(60, (state.maxCleared|0) + 1));
 });
+document.getElementById('restartFromOneLink').addEventListener('click', ()=> beginRun(1));
 document.getElementById('nextBtn').addEventListener('click', ()=>{
   resultScreen.classList.add('hidden');
   if(state.level >= 60){
@@ -1599,6 +1715,7 @@ function goHome(){
   winScreen.classList.add('hidden');
   updateCoinHud();
   renderLoadoutPreview();
+  syncStartScreen();
   startScreen.classList.remove('hidden');
 }
 document.getElementById('homeBtn').addEventListener('click', goHome);
@@ -1866,7 +1983,7 @@ function update(dt){
     // Expressed in the same "px per 60fps frame" unit as everything else,
     // so it lands in 3–4.5 real seconds regardless of device frame rate.
     const remaining = (GROUND_Y - 6) - p.y;
-    const targetSeconds = 3 + Math.random()*1.5;
+    const targetSeconds = 3 + Math.random()*1.5 + (state.easyMode ? 2 : 0);
     p.glideVy = remaining / (targetSeconds * 60);
     // Shield only matters once levels get hectic — none in the easy levels,
     // ramping up gradually as obstacles get more common in harder levels.
@@ -1892,13 +2009,14 @@ function update(dt){
     const flareZone = 90;
     const flareFactor = remaining < flareZone ? Math.max(0.4, remaining/flareZone) : 1;
     p.vy = baseVy * flareFactor;
-    const accel = 0.16 * dtScale;
+    const accel = (state.easyMode ? 0.26 : 0.16) * dtScale;
     if(state.keys.left) p.vx -= accel;
     if(state.keys.right) p.vx += accel;
     p.vx *= Math.pow(0.94, dtScale);
-    p.vx = Math.max(-3.2, Math.min(3.2, p.vx));
-    // wind drift
-    p.vx += Math.sin(state.windPhase)*cfg.wind*0.15*dtScale;
+    const vxCap = state.easyMode ? 4.4 : 3.2;
+    p.vx = Math.max(-vxCap, Math.min(vxCap, p.vx));
+    // wind drift — much gentler in easy mode
+    p.vx += Math.sin(state.windPhase)*cfg.wind*0.15*dtScale*(state.easyMode ? 0.3 : 1);
     SFX.windSetIntensity(Math.abs(p.vx)/3.2 + (diving ? 0.5 : 0));
   }
 
@@ -1944,6 +2062,7 @@ function crashObstacle(o){
     resultSub.textContent = 'You clipped a ' + (o.type==='bird'?'bird':o.type==='bee'?'bee':'balloon') + ' mid-air. Steer around them next time.';
     resultStars.innerHTML = '';
     resultCoins.style.display = 'none';
+    document.getElementById('progressTrail').style.display = 'none';
     nextBtn.classList.add('hidden');
     document.getElementById('retryBtn').classList.remove('secondary');
     document.getElementById('retryBtn').classList.add('primary');
@@ -1965,6 +2084,38 @@ function renderStars(container, count){
   let html = '';
   for(let i=0;i<3;i++){ html += '<span class="'+(i<count?'on':'off')+'">★</span>'; }
   container.innerHTML = html;
+}
+
+// The checkpoint trail on the result screen: seven vehicle-stage nodes, a fill
+// bar up to the furthest level cleared, and a caption about the next checkpoint.
+function renderProgressTrail(justCleared){
+  const cleared = state.maxCleared|0;
+  const nodesEl = document.getElementById('trailNodes');
+  const fillEl = document.getElementById('trailFill');
+  const capEl = document.getElementById('trailCaption');
+
+  const currentStage = STAGES.findIndex(s => cleared < s.end);
+  nodesEl.innerHTML = STAGES.map((s, i) => {
+    const done = cleared >= s.end;
+    const cls = done ? 'trailNode done' : (i === currentStage ? 'trailNode current' : 'trailNode');
+    return '<div class="'+cls+'" title="'+s.name+' (to Lv '+s.end+')">'+(done ? '✓' : s.icon)+'</div>';
+  }).join('');
+
+  fillEl.style.width = (90 * Math.max(0, Math.min(1, cleared / 60))) + '%';
+
+  const hitCheckpoint = justCleared && STAGES.some(s => s.end === cleared);
+  if(cleared >= 60){
+    capEl.textContent = '🏁 All 60 levels cleared!';
+    capEl.className = 'trailCaption checkpoint';
+  } else if(hitCheckpoint){
+    const s = STAGES.find(x => x.end === cleared);
+    capEl.textContent = '🚩 Checkpoint! ' + s.name + ' complete';
+    capEl.className = 'trailCaption checkpoint';
+  } else {
+    const s = STAGES[currentStage];
+    capEl.textContent = (s.end - cleared) + ' more to the ' + s.name + ' checkpoint';
+    capEl.className = 'trailCaption';
+  }
 }
 
 function spawnConfetti(x, y){
@@ -2058,11 +2209,16 @@ function landCheck(){
   const p = state.player;
   const t = state.target;
   const dx = Math.abs(p.x - t.x);
-  const success = p.chuteOpen && dx <= cfg.halfWidth;
+  const landTolerance = cfg.halfWidth * (state.easyMode ? 1.6 : 1);
+  const success = p.chuteOpen && dx <= landTolerance;
 
   state.phase = success ? 'landed' : 'crashed';
   running = false;
   stopTutorial();
+  if(success && state.level > state.maxCleared){
+    state.maxCleared = state.level;
+    persistSave();
+  }
   state.camera.shakeT = success ? 140 : 220;
   state.camera.shakeMag = success ? 3 : 6;
   SFX.windStop();
@@ -2118,6 +2274,8 @@ function landCheck(){
         renderStars(resultStars, stars);
         resultCoins.textContent = '🪙 +' + coinsEarned + '  (total ' + state.coins + ')';
         resultCoins.style.display = 'inline-block';
+        renderProgressTrail(true);
+        document.getElementById('progressTrail').style.display = 'flex';
         nextBtn.classList.remove('hidden');
         document.getElementById('retryBtn').classList.remove('primary');
         document.getElementById('retryBtn').classList.add('secondary');
@@ -2137,6 +2295,7 @@ function landCheck(){
       resultSub.textContent = p.chuteOpen ? 'You landed ' + Math.round(dx) + 'px off target. Steer earlier next time.' : 'You hit the ground before opening your chute.';
       resultStars.innerHTML = '';
       resultCoins.style.display = 'none';
+      document.getElementById('progressTrail').style.display = 'none';
       nextBtn.classList.add('hidden');
       document.getElementById('retryBtn').classList.remove('secondary');
       document.getElementById('retryBtn').classList.add('primary');
@@ -2493,6 +2652,32 @@ function roundRect(x,y,w,h,r){
   ctx.arcTo(x,y+h,x,y,r);
   ctx.arcTo(x,y,x+w,y,r);
   ctx.closePath();
+}
+
+// Easy-mode aid: a dashed line from the jumper to a predicted touchdown spot,
+// so you can line the marker up with the target's centre.
+function drawLandingGuide(p){
+  if(!p.chuteOpen) return;
+  const vy = Math.max(0.001, p.vy);
+  const framesToGround = ((GROUND_Y - 6) - p.y) / vy;
+  let predX = p.x + p.vx * Math.min(framesToGround, 40) * 0.5;
+  predX = Math.max(22, Math.min(W - 22, predX));
+
+  ctx.save();
+  ctx.strokeStyle = 'rgba(79,214,160,0.85)';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([6, 6]);
+  ctx.beginPath();
+  ctx.moveTo(p.x, p.y + 8);
+  ctx.lineTo(predX, GROUND_Y - 4);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.beginPath();
+  ctx.arc(predX, GROUND_Y - 4, 7, 0, Math.PI*2);
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(79,214,160,0.30)';
+  ctx.fill();
+  ctx.restore();
 }
 
 function drawPlayer(p){
@@ -2938,6 +3123,7 @@ function draw(){
   if(state.phase==='plane'){
     drawPlaneRider(state.plane);
   } else {
+    if(state.easyMode && (state.phase==='falling' || state.phase==='open')) drawLandingGuide(state.player);
     drawPlayer(state.player);
   }
   ctx.restore();
@@ -2998,6 +3184,10 @@ function frame(ts){
 }
 updateCoinHud();
 requestAnimationFrame(frame);
+
+if(location.search.includes('debug')){
+  window.__dbg = { state, get p(){return state.player;}, get t(){return state.target;}, renderProgressTrail, setEasyMode, loadLevel };
+}
 
 })();
 </script>
