@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>SkyDrop — 60 Level Parachute Challenge</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --sky-top:#3aa7e0;
+    --sky-bottom:#bfe8f7;
+    --navy:#132a4a;
+    --navy-2:#1c3a63;
+    --panel:#0f2340;
+    --cream:#fff6e8;
+    --orange:#ff8a4c;
+    --orange-2:#ff6a3d;
+    --mint:#4fd6a0;
+    --coral:#ff5f6d;
+    --gold:#ffd166;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0; padding:0; height:100%;
+    background:radial-gradient(circle at 50% 0%, #204169, #081428 75%);
+    font-family:'Nunito', sans-serif;
+    color:var(--cream);
+    overflow:hidden;
+    -webkit-tap-highlight-color: transparent;
+    user-select:none;
+  }
+  h1,h2,h3,.display{ font-family:'Baloo 2', sans-serif; }
+
+  #app{
+    max-width:920px;
+    margin:0 auto;
+    height:100%;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding:10px;
+  }
+
+  #gameWrap{
+    position:relative;
+    width:100%;
+    max-width:900px;
+    aspect-ratio: 900/560;
+    border-radius:18px;
+    overflow:hidden;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.45), 0 0 0 3px rgba(255,255,255,0.06) inset;
+    background:#000;
+  }
+
+  canvas{
+    display:block;
+    width:100%;
+    height:100%;
+  }
+
+  /* ---------- HUD ---------- */
+  #hud{
+    position:absolute; top:0; left:0; right:0;
+    display:flex; justify-content:space-between; align-items:flex-start;
+    padding:10px 14px;
+    pointer-events:none;
+    font-family:'Baloo 2', sans-serif;
+  }
+  .hudChip{
+    background:rgba(15,35,64,0.72);
+    backdrop-filter: blur(3px);
+    border-radius:10px;
+    padding:6px 12px;
+    font-weight:700;
+    font-size:15px;
+    letter-spacing:0.3px;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+  }
+  #hudLevel{ color:var(--gold); }
+  #hudTarget{ color:var(--cream); font-weight:600; font-size:13px; margin-top:4px; }
+
+  /* ---------- Touch controls ---------- */
+  #touchControls{
+    position:absolute; bottom:14px; left:0; right:0;
+    display:flex; justify-content:space-between; padding:0 16px;
+    pointer-events:none;
+  }
+  .padBtn{
+    pointer-events:auto;
+    width:64px; height:64px;
+    border-radius:50%;
+    background:rgba(255,255,255,0.12);
+    border:2px solid rgba(255,255,255,0.35);
+    color:#fff;
+    font-size:26px;
+    display:flex; align-items:center; justify-content:center;
+    backdrop-filter: blur(2px);
+    touch-action:none;
+  }
+  .padBtn:active{ background:rgba(255,255,255,0.3); }
+
+  /* ---------- Overlays ---------- */
+  .overlay{
+    position:absolute; inset:0;
+    background:linear-gradient(180deg, rgba(7,16,32,0.88), rgba(7,16,32,0.96));
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center;
+    padding:24px;
+    gap:14px;
+  }
+  .hidden{ display:none !important; }
+
+  .titleLogo{
+    font-size:clamp(32px, 7vw, 52px);
+    font-weight:800;
+    color:var(--gold);
+    text-shadow: 0 4px 0 rgba(0,0,0,0.35);
+    letter-spacing:1px;
+    line-height:1;
+  }
+  .titleLogo span{ color:var(--orange); }
+  .subtitle{ color:#cfe4f7; font-size:14px; max-width:420px; font-weight:600; }
+
+  .rowPick{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:center; }
+  .pickLabel{ font-family:'Baloo 2'; font-weight:700; color:var(--cream); font-size:14px; width:100%; }
+  .swatch{
+    width:34px; height:34px; border-radius:50%;
+    border:3px solid rgba(255,255,255,0.15);
+    cursor:pointer;
+  }
+  .swatch.selected{ border-color:var(--gold); transform:scale(1.12); }
+
+  .charOption{
+    width:56px; height:66px;
+    border-radius:12px;
+    border:3px solid rgba(255,255,255,0.15);
+    background:rgba(255,255,255,0.06);
+    cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .charOption.selected{ border-color:var(--gold); background:rgba(255,209,102,0.15); }
+
+  button.primary{
+    font-family:'Baloo 2', sans-serif;
+    font-weight:700;
+    font-size:19px;
+    color:#12233d;
+    background:linear-gradient(180deg, var(--gold), var(--orange));
+    border:none;
+    padding:12px 34px;
+    border-radius:14px;
+    cursor:pointer;
+    box-shadow: 0 6px 0 #b8560f, 0 10px 18px rgba(0,0,0,0.35);
+    transition: transform 0.06s ease;
+  }
+  button.primary:active{ transform: translateY(4px); box-shadow: 0 2px 0 #b8560f; }
+
+  button.secondary{
+    font-family:'Baloo 2', sans-serif;
+    font-weight:700;
+    font-size:15px;
+    color:var(--cream);
+    background:rgba(255,255,255,0.08);
+    border:2px solid rgba(255,255,255,0.25);
+    padding:9px 20px;
+    border-radius:12px;
+    cursor:pointer;
+  }
+
+  #resultTitle{ font-size:clamp(26px,6vw,38px); font-weight:800; font-family:'Baloo 2'; }
+  #resultTitle.win{ color:var(--mint); }
+  #resultTitle.fail{ color:var(--coral); }
+  #resultSub{ font-size:14px; color:#cfe4f7; font-weight:600; max-width:360px; }
+
+  #levelBanner{
+    position:absolute; top:44%; left:0; right:0;
+    text-align:center;
+    transform:translateY(-50%);
+    pointer-events:none;
+    font-family:'Baloo 2';
+  }
+  #levelBanner .num{ font-size:clamp(30px,7vw,50px); font-weight:800; color:#fff; text-shadow:0 4px 10px rgba(0,0,0,0.5);}
+  #levelBanner .name{ font-size:15px; font-weight:700; color:var(--gold); margin-top:4px; text-shadow:0 2px 6px rgba(0,0,0,0.5);}
+
+  footer.note{
+    margin-top:10px;
+    font-size:12px;
+    color:#8fb0d0;
+    text-align:center;
+    max-width:520px;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="gameWrap">
+    <canvas id="game" width="900" height="560"></canvas>
+
+    <div id="hud">
+      <div class="hudChip" id="hudLevel">Level 1 / 60</div>
+      <div style="text-align:right;">
+        <div class="hudChip" id="hudStatus">Get Ready</div>
+      </div>
+    </div>
+
+    <div id="levelBanner" class="hidden">
+      <div class="num" id="levelBannerNum">Level 1</div>
+      <div class="name" id="levelBannerName">Fixed Target</div>
+    </div>
+
+    <div id="touchControls">
+      <div class="padBtn" id="btnLeft">◀</div>
+      <div class="padBtn" id="btnRight">▶</div>
+    </div>
+
+    <!-- START SCREEN -->
+    <div id="startScreen" class="overlay">
+      <div class="titleLogo">SKY<span>DROP</span></div>
+      <div class="subtitle">Jump from the plane, open your chute, steer with ◀ ▶ and land dead-center on the target. 60 levels, from a calm bullseye to a speeding train.</div>
+
+      <div class="rowPick">
+        <div class="pickLabel">Choose your jumper</div>
+        <div class="charOption selected" data-char="0"></div>
+        <div class="charOption" data-char="1"></div>
+        <div class="charOption" data-char="2"></div>
+        <div class="charOption" data-char="3"></div>
+      </div>
+
+      <div class="rowPick">
+        <div class="pickLabel">Choose your parachute</div>
+        <div class="swatch selected" style="background:#ff6a3d" data-color="#ff6a3d"></div>
+        <div class="swatch" style="background:#4fd6a0" data-color="#4fd6a0"></div>
+        <div class="swatch" style="background:#ffd166" data-color="#ffd166"></div>
+        <div class="swatch" style="background:#7c9bff" data-color="#7c9bff"></div>
+        <div class="swatch" style="background:#ff5f9e" data-color="#ff5f9e"></div>
+        <div class="swatch" style="background:#ffffff" data-color="#ffffff"></div>
+      </div>
+
+      <button class="primary" id="startBtn">Start Jumping</button>
+      <footer class="note">Keyboard: ← → to steer. On touch devices use the on-screen arrows. Your chute opens automatically once you fall low enough — steer onto the moving target before you land!</footer>
+    </div>
+
+    <!-- RESULT SCREEN -->
+    <div id="resultScreen" class="overlay hidden">
+      <div id="resultTitle">Nice Landing!</div>
+      <div id="resultSub">You stuck the landing on the target.</div>
+      <button class="primary" id="nextBtn">Next Level</button>
+      <button class="secondary" id="retryBtn">Retry Level</button>
+    </div>
+
+    <!-- WIN SCREEN -->
+    <div id="winScreen" class="overlay hidden">
+      <div class="titleLogo">ALL <span>60</span> CLEARED!</div>
+      <div class="subtitle">You landed every target from a still bullseye to a speeding ship at sea. You're SkyDrop's top jumper.</div>
+      <button class="primary" id="playAgainBtn">Jump From Level 1</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
+const GROUND_Y = H - 70;
+
+// ---------------------------------------------------------------
+// Config: scenery themes, vehicle types, characters, parachutes
+// ---------------------------------------------------------------
+const SCENERIES = {
+  city: { sky:['#4fb8ea','#bfe8f7'], ground:'#5a6a78', groundTop:'#6d7f8e', deco:'buildings' },
+  desert:{ sky:['#f5a85a','#ffe1b0'], ground:'#d9b06a', groundTop:'#e6c483', deco:'dunes' },
+  forest:{ sky:['#6fc7e6','#d7f3ea'], ground:'#4f9159', groundTop:'#5fae6c', deco:'trees' },
+  sea:   { sky:['#3aa7d0','#cdeffa'], ground:'#1f6fa8', groundTop:'#2c86c4', deco:'waves' },
+  snow:  { sky:['#8fb9d6','#eaf4fb'], ground:'#e7eef4', groundTop:'#ffffff', deco:'snow' },
+  night: { sky:['#0d1b3a','#294a7a'], ground:'#3a3f52', groundTop:'#484f66', deco:'lights' }
+};
+
+const CHAR_COLORS = ['#ffd6a5', '#8d5524', '#f1c27d', '#ffe0bd'];
+const CHAR_SUITS  = ['#ff6a3d', '#4fd6a0', '#7c9bff', '#ff5f9e'];
+
+// Vehicle drawing registry. Each returns visual half-width used for hit-testing.
+const VEHICLES = ['fixed','car','van','truck','train','boat','ship'];
+
+// ---------------------------------------------------------------
+// Level generation (procedural, 60 levels)
+// ---------------------------------------------------------------
+function generateLevel(n){
+  // n: 1..60
+  let type, scenery, speed, halfWidth, wind, label;
+
+  if(n <= 8){
+    type = 'fixed';
+    scenery = ['forest','desert','city'][n % 3];
+    speed = 0;
+    halfWidth = Math.max(46, 78 - n*3);
+    wind = 0;
+    label = 'Fixed Target';
+  } else if(n <= 18){
+    type = 'car';
+    scenery = 'desert';
+    speed = 1.1 + (n-9)*0.16;
+    halfWidth = Math.max(40, 60 - (n-9)*1.1);
+    wind = 0;
+    label = 'Moving Car';
+  } else if(n <= 28){
+    type = 'van';
+    scenery = 'city';
+    speed = 1.3 + (n-19)*0.15;
+    halfWidth = Math.max(42, 66 - (n-19)*1.1);
+    wind = (n>24)? (n-24)*0.03 : 0;
+    label = 'Delivery Van';
+  } else if(n <= 37){
+    type = 'truck';
+    scenery = 'desert';
+    speed = 1.5 + (n-29)*0.14;
+    halfWidth = Math.max(46, 74 - (n-29)*1.0);
+    wind = (n-29)*0.035;
+    label = 'Long Haul Truck';
+  } else if(n <= 47){
+    type = 'train';
+    scenery = 'forest';
+    speed = 2.0 + (n-38)*0.17;
+    halfWidth = Math.max(50, 90 - (n-38)*1.2);
+    wind = (n-38)*0.04;
+    label = 'Speeding Train';
+  } else if(n <= 54){
+    type = 'boat';
+    scenery = 'sea';
+    speed = 1.6 + (n-48)*0.2;
+    halfWidth = Math.max(36, 56 - (n-48)*1.3);
+    wind = 0.25 + (n-48)*0.05;
+    label = 'Bobbing Boat';
+  } else {
+    type = 'ship';
+    scenery = (n>=58)? 'night' : 'sea';
+    speed = 1.8 + (n-55)*0.22;
+    halfWidth = Math.max(34, 50 - (n-55)*1.2);
+    wind = 0.35 + (n-55)*0.06;
+    label = 'Cargo Ship';
+  }
+
+  // sway amplitude for target's back-and-forth motion
+  const range = W*0.62;
+  return { n, type, scenery, speed, halfWidth, wind, label, range };
+}
+
+// ---------------------------------------------------------------
+// Game state
+// ---------------------------------------------------------------
+let state = {
+  level: 1,
+  chosenChar: 0,
+  chosenChute: '#ff6a3d',
+  cfg: null,
+  player: null,
+  target: null,
+  phase: 'idle', // idle | falling | open | landed | crashed
+  keys: {left:false, right:false},
+  windPhase: 0,
+  shakeT: 0,
+  cloudX: 0
+};
+
+function resetPlayerForLevel(){
+  const cfg = state.cfg;
+  state.player = {
+    x: W/2 + (Math.random()*120-60),
+    y: 30,
+    vx: 0,
+    vy: 2.2,
+    chuteOpen: false,
+    openAt: GROUND_Y - 300 - Math.random()*40,
+    legAngle:0
+  };
+  // target initial position/direction
+  const startX = W*0.5 + (Math.random()>0.5?1:-1)*cfg.range*0.25;
+  state.target = {
+    x: cfg.type==='fixed' ? (W*0.3 + Math.random()*W*0.4) : startX,
+    dir: Math.random()>0.5?1:-1,
+    baseY: GROUND_Y,
+    bob: 0
+  };
+  state.phase = 'falling';
+}
+
+function loadLevel(n){
+  state.level = n;
+  state.cfg = generateLevel(n);
+  resetPlayerForLevel();
+  showLevelBanner(state.cfg);
+  updateHud();
+}
+
+// ---------------------------------------------------------------
+// UI wiring
+// ---------------------------------------------------------------
+const startScreen = document.getElementById('startScreen');
+const resultScreen = document.getElementById('resultScreen');
+const winScreen = document.getElementById('winScreen');
+const levelBanner = document.getElementById('levelBanner');
+const hudLevel = document.getElementById('hudLevel');
+const hudStatus = document.getElementById('hudStatus');
+
+document.querySelectorAll('.charOption').forEach(el=>{
+  el.addEventListener('click', ()=>{
+    document.querySelectorAll('.charOption').forEach(e=>e.classList.remove('selected'));
+    el.classList.add('selected');
+    state.chosenChar = parseInt(el.dataset.char,10);
+  });
+});
+document.querySelectorAll('.swatch').forEach(el=>{
+  el.addEventListener('click', ()=>{
+    document.querySelectorAll('.swatch').forEach(e=>e.classList.remove('selected'));
+    el.classList.add('selected');
+    state.chosenChute = el.dataset.color;
+  });
+});
+
+document.getElementById('startBtn').addEventListener('click', ()=>{
+  startScreen.classList.add('hidden');
+  loadLevel(1);
+  running = true;
+});
+document.getElementById('nextBtn').addEventListener('click', ()=>{
+  resultScreen.classList.add('hidden');
+  if(state.level >= 60){
+    winScreen.classList.remove('hidden');
+  } else {
+    loadLevel(state.level+1);
+  }
+});
+document.getElementById('retryBtn').addEventListener('click', ()=>{
+  resultScreen.classList.add('hidden');
+  loadLevel(state.level);
+});
+document.getElementById('playAgainBtn').addEventListener('click', ()=>{
+  winScreen.classList.add('hidden');
+  loadLevel(1);
+});
+
+function showLevelBanner(cfg){
+  document.getElementById('levelBannerNum').textContent = 'Level ' + cfg.n;
+  document.getElementById('levelBannerName').textContent = cfg.type==='fixed' ? 'Fixed Target' : cfg.label;
+  levelBanner.classList.remove('hidden');
+  clearTimeout(showLevelBanner._t);
+  showLevelBanner._t = setTimeout(()=> levelBanner.classList.add('hidden'), 1400);
+}
+function updateHud(){
+  hudLevel.textContent = 'Level ' + state.level + ' / 60';
+}
+
+// ---------------------------------------------------------------
+// Input
+// ---------------------------------------------------------------
+window.addEventListener('keydown', e=>{
+  if(e.code==='ArrowLeft'||e.code==='KeyA') state.keys.left = true;
+  if(e.code==='ArrowRight'||e.code==='KeyD') state.keys.right = true;
+});
+window.addEventListener('keyup', e=>{
+  if(e.code==='ArrowLeft'||e.code==='KeyA') state.keys.left = false;
+  if(e.code==='ArrowRight'||e.code==='KeyD') state.keys.right = false;
+});
+function bindPad(el, key){
+  const set = v => e => { e.preventDefault(); state.keys[key]=v; };
+  el.addEventListener('touchstart', set(true), {passive:false});
+  el.addEventListener('touchend', set(false), {passive:false});
+  el.addEventListener('touchcancel', set(false), {passive:false});
+  el.addEventListener('mousedown', set(true));
+  el.addEventListener('mouseup', set(false));
+  el.addEventListener('mouseleave', set(false));
+}
+bindPad(document.getElementById('btnLeft'), 'left');
+bindPad(document.getElementById('btnRight'), 'right');
+
+// ---------------------------------------------------------------
+// Physics / update
+// ---------------------------------------------------------------
+function updateTarget(cfg, t){
+  if(cfg.type==='fixed'){ t.bob += 0.02; return; }
+  const minX = W*0.14 + cfg.halfWidth;
+  const maxX = W*0.86 - cfg.halfWidth;
+  t.x += t.dir * cfg.speed;
+  if(t.x < minX){ t.x = minX; t.dir = 1; }
+  if(t.x > maxX){ t.x = maxX; t.dir = -1; }
+  t.bob += 0.06;
+}
+
+function update(dt){
+  if(state.phase!=='falling' && state.phase!=='open') return;
+  const cfg = state.cfg;
+  const p = state.player;
+
+  updateTarget(cfg, state.target);
+  state.windPhase += 0.02;
+
+  if(!p.chuteOpen && p.y >= p.openAt){
+    p.chuteOpen = true;
+    state.phase = 'open';
+  }
+
+  if(!p.chuteOpen){
+    p.vy = 4.6;
+    p.vx *= 0.98;
+  } else {
+    p.vy = 1.35;
+    const accel = 0.18;
+    if(state.keys.left) p.vx -= accel;
+    if(state.keys.right) p.vx += accel;
+    p.vx *= 0.94;
+    p.vx = Math.max(-3.4, Math.min(3.4, p.vx));
+    // wind drift
+    p.vx += Math.sin(state.windPhase)*cfg.wind*0.15;
+  }
+
+  p.x += p.vx;
+  p.y += p.vy;
+  p.legAngle = Math.sin(performance.now()/120)*0.2;
+
+  const margin = 22;
+  if(p.x < margin) { p.x = margin; p.vx = 0; }
+  if(p.x > W-margin) { p.x = W-margin; p.vx = 0; }
+
+  if(p.y >= GROUND_Y - 6){
+    p.y = GROUND_Y - 6;
+    landCheck();
+  }
+}
+
+function landCheck(){
+  const cfg = state.cfg;
+  const p = state.player;
+  const t = state.target;
+  const dx = Math.abs(p.x - t.x);
+  const success = p.chuteOpen && dx <= cfg.halfWidth;
+
+  state.phase = success ? 'landed' : 'crashed';
+  running = false;
+
+  const resultTitle = document.getElementById('resultTitle');
+  const resultSub = document.getElementById('resultSub');
+  const nextBtn = document.getElementById('nextBtn');
+  const retryBtn = document.getElementById('retryBtn');
+
+  draw();
+
+  setTimeout(()=>{
+    if(success){
+      resultTitle.textContent = 'Nice Landing!';
+      resultTitle.className = 'win';
+      resultSub.textContent = 'Level ' + state.level + ' cleared — you stuck it on the ' + (cfg.type==='fixed'?'target':cfg.label.toLowerCase()) + '.';
+      nextBtn.classList.remove('hidden');
+    } else {
+      resultTitle.textContent = p.chuteOpen ? 'Missed the Target' : 'Chute Never Opened!';
+      resultTitle.className = 'fail';
+      resultSub.textContent = p.chuteOpen ? 'You landed ' + Math.round(dx) + 'px off target. Steer earlier next time.' : 'You hit the ground before opening your chute.';
+      nextBtn.classList.add('hidden');
+    }
+    resultScreen.classList.remove('hidden');
+  }, 450);
+}
+
+// ---------------------------------------------------------------
+// Drawing helpers
+// ---------------------------------------------------------------
+function drawSky(theme){
+  const g = ctx.createLinearGradient(0,0,0,GROUND_Y);
+  g.addColorStop(0, theme.sky[0]);
+  g.addColorStop(1, theme.sky[1]);
+  ctx.fillStyle = g;
+  ctx.fillRect(0,0,W,GROUND_Y+40);
+
+  // sun/moon
+  ctx.beginPath();
+  ctx.fillStyle = theme===SCENERIES.night ? '#eef2ff' : 'rgba(255,255,255,0.85)';
+  ctx.arc(W-90, 80, theme===SCENERIES.night?22:34, 0, Math.PI*2);
+  ctx.fill();
+
+  // stars for night
+  if(theme===SCENERIES.night){
+    ctx.fillStyle='rgba(255,255,255,0.8)';
+    for(let i=0;i<40;i++){
+      const sx = (i*97) % W;
+      const sy = (i*53) % (GROUND_Y-100);
+      ctx.fillRect(sx, sy, 2, 2);
+    }
+  }
+
+  // clouds
+  state.cloudX -= 0.15;
+  ctx.fillStyle = theme===SCENERIES.night ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.55)';
+  for(let i=0;i<4;i++){
+    const cx = ((state.cloudX + i*260) % (W+200)) - 100;
+    const cy = 60 + (i%2)*50;
+    drawCloud(cx, cy, 40 + (i%2)*14);
+  }
+}
+function drawCloud(x,y,r){
+  ctx.beginPath();
+  ctx.arc(x,y,r*0.6,0,Math.PI*2);
+  ctx.arc(x+r*0.5,y+6,r*0.5,0,Math.PI*2);
+  ctx.arc(x-r*0.5,y+8,r*0.45,0,Math.PI*2);
+  ctx.fill();
+}
+
+function drawGround(theme){
+  ctx.fillStyle = theme.groundTop;
+  ctx.fillRect(0, GROUND_Y, W, 8);
+  ctx.fillStyle = theme.ground;
+  ctx.fillRect(0, GROUND_Y+8, W, H-GROUND_Y-8);
+
+  if(theme.deco==='buildings'){
+    ctx.fillStyle='rgba(0,0,0,0.12)';
+    for(let i=0;i<9;i++){
+      const bw=34, bh=20+((i*37)%50);
+      ctx.fillRect(i*100+6, GROUND_Y-bh+8, bw, bh);
+    }
+  } else if(theme.deco==='dunes'){
+    ctx.fillStyle='rgba(255,255,255,0.15)';
+    for(let i=0;i<6;i++){
+      ctx.beginPath();
+      ctx.ellipse(i*170+40, GROUND_Y+18, 90, 14, 0, 0, Math.PI*2);
+      ctx.fill();
+    }
+  } else if(theme.deco==='trees'){
+    ctx.fillStyle='#2f6b3c';
+    for(let i=0;i<10;i++){
+      const tx = i*95+30;
+      ctx.beginPath();
+      ctx.moveTo(tx, GROUND_Y+6);
+      ctx.lineTo(tx+16, GROUND_Y-26);
+      ctx.lineTo(tx+32, GROUND_Y+6);
+      ctx.fill();
+    }
+  } else if(theme.deco==='waves'){
+    ctx.strokeStyle='rgba(255,255,255,0.35)';
+    ctx.lineWidth=2;
+    for(let i=0;i<5;i++){
+      ctx.beginPath();
+      for(let x=0;x<=W;x+=20){
+        const yy = GROUND_Y+20+i*22 + Math.sin((x+performance.now()/300+i*40)/40)*4;
+        if(x===0) ctx.moveTo(x,yy); else ctx.lineTo(x,yy);
+      }
+      ctx.stroke();
+    }
+  } else if(theme.deco==='snow'){
+    ctx.fillStyle='rgba(255,255,255,0.9)';
+    for(let i=0;i<26;i++){
+      const sx=(i*53+((performance.now()/40)%W))%W;
+      const sy=(i*97)%GROUND_Y;
+      ctx.beginPath(); ctx.arc(sx,sy,2,0,Math.PI*2); ctx.fill();
+    }
+  } else if(theme.deco==='lights'){
+    for(let i=0;i<9;i++){
+      ctx.fillStyle='rgba(255,220,150,0.85)';
+      ctx.fillRect(i*100+20, GROUND_Y-40, 10, 40);
+      ctx.beginPath();
+      ctx.fillStyle='rgba(255,230,180,0.9)';
+      ctx.arc(i*100+25, GROUND_Y-46, 8,0,Math.PI*2); ctx.fill();
+    }
+  }
+}
+
+function drawTarget(cfg, t){
+  const y = GROUND_Y;
+  const bob = Math.sin(t.bob)*(cfg.type==='boat'||cfg.type==='ship'?4:0);
+  ctx.save();
+  ctx.translate(t.x, y+bob);
+
+  // landing marker under vehicle
+  ctx.save();
+  ctx.globalAlpha=0.55;
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.ellipse(0, 6, cfg.halfWidth, 8, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.strokeStyle='#ff5f6d';
+  ctx.lineWidth=2;
+  ctx.beginPath(); ctx.ellipse(0,6,cfg.halfWidth*0.5,4,0,0,Math.PI*2); ctx.stroke();
+  ctx.restore();
+
+  const hw = cfg.halfWidth;
+  switch(cfg.type){
+    case 'fixed': {
+      ctx.strokeStyle='#ff5f6d'; ctx.lineWidth=4;
+      for(let r of [hw, hw*0.66, hw*0.33]){
+        ctx.beginPath(); ctx.arc(0,-4,r,0,Math.PI*2);
+        ctx.strokeStyle = r===hw?'#ffffff': r===hw*0.66 ? '#ff5f6d':'#ffd166';
+        ctx.stroke();
+      }
+      ctx.fillStyle='#132a4a';
+      ctx.fillRect(-4, -4, 8, 40);
+      break;
+    }
+    case 'car': {
+      ctx.fillStyle='#e05a4e';
+      roundRect(-hw*0.9,-26,hw*1.8,20,6); ctx.fill();
+      ctx.fillStyle='#c94236';
+      roundRect(-hw*0.55,-40,hw*1.1,18,6); ctx.fill();
+      wheels([-hw*0.55, hw*0.55], -6);
+      break;
+    }
+    case 'van': {
+      ctx.fillStyle='#4c8fd6';
+      roundRect(-hw*0.95,-52,hw*1.9,46,8); ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,0.5)';
+      ctx.fillRect(-hw*0.55,-42,hw*0.4,16);
+      wheels([-hw*0.6, hw*0.6], -6);
+      break;
+    }
+    case 'truck': {
+      ctx.fillStyle='#d9d9d9';
+      roundRect(-hw*0.98,-44,hw*1.3,38,6); ctx.fill();
+      ctx.fillStyle='#3f6fae';
+      roundRect(-hw*0.35,-30,hw*1.3,26,4); ctx.fill();
+      wheels([-hw*0.75,-hw*0.15, hw*0.6], -6);
+      break;
+    }
+    case 'train': {
+      ctx.fillStyle='#4a4f5c';
+      ctx.fillRect(-hw, 4, hw*2, 4); // rail
+      ctx.fillStyle='#c94236';
+      roundRect(-hw*0.95,-40,hw*0.9,34,6); ctx.fill();
+      ctx.fillStyle='#a8362b';
+      roundRect(-hw*0.05,-40,hw*1.0,34,6); ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,0.6)';
+      ctx.fillRect(-hw*0.75,-32,14,12);
+      ctx.fillRect(hw*0.15,-32,14,12);
+      wheels([-hw*0.7,-hw*0.3,hw*0.15,hw*0.55], -6);
+      break;
+    }
+    case 'boat': {
+      ctx.fillStyle='#f2c14e';
+      ctx.beginPath();
+      ctx.moveTo(-hw,-4); ctx.lineTo(hw,-4); ctx.lineTo(hw*0.7,14); ctx.lineTo(-hw*0.7,14);
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle='#e8e8e8';
+      roundRect(-hw*0.35,-26,hw*0.7,22,4); ctx.fill();
+      break;
+    }
+    case 'ship': {
+      ctx.fillStyle='#5a6b7a';
+      ctx.beginPath();
+      ctx.moveTo(-hw,-2); ctx.lineTo(hw,-2); ctx.lineTo(hw*0.85,16); ctx.lineTo(-hw*0.85,16);
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle='#eef1f4';
+      roundRect(-hw*0.5,-34,hw*0.6,32,4); ctx.fill();
+      ctx.fillStyle='#d1453b';
+      ctx.fillRect(-hw*0.1,-52,10,20);
+      break;
+    }
+  }
+  ctx.restore();
+}
+function wheels(xs, y){
+  ctx.fillStyle='#1b1e24';
+  xs.forEach(x=>{ ctx.beginPath(); ctx.arc(x,y+2,8,0,Math.PI*2); ctx.fill(); });
+}
+function roundRect(x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+}
+
+function drawPlayer(p){
+  const skin = CHAR_COLORS[state.chosenChar];
+  const suit = CHAR_SUITS[state.chosenChar];
+  const chute = state.chosenChute;
+
+  ctx.save();
+  ctx.translate(p.x, p.y);
+
+  if(p.chuteOpen){
+    // shroud lines
+    ctx.strokeStyle='rgba(255,255,255,0.7)';
+    ctx.lineWidth=1.4;
+    ctx.beginPath(); ctx.moveTo(-9,-14); ctx.lineTo(-40,-70); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(9,-14); ctx.lineTo(40,-70); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-9,-14); ctx.lineTo(0,-70); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(9,-14); ctx.lineTo(0,-70); ctx.stroke();
+
+    // canopy
+    ctx.fillStyle = chute;
+    ctx.beginPath();
+    ctx.moveTo(-46,-70);
+    ctx.quadraticCurveTo(0,-118, 46,-70);
+    ctx.quadraticCurveTo(0,-84, -46,-70);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle='rgba(0,0,0,0.15)'; ctx.lineWidth=1.5;
+    for(let i=-2;i<=2;i++){
+      ctx.beginPath();
+      ctx.moveTo(i*18,-70+ (Math.abs(i)*3));
+      ctx.quadraticCurveTo(i*9,-100, 0,-104);
+      ctx.stroke();
+    }
+  } else {
+    // small plane trail hint near top of level
+    if(p.y < 90){
+      ctx.fillStyle='rgba(255,255,255,0.85)';
+      ctx.fillRect(-30,-40,44,10);
+      ctx.fillRect(-10,-52,10,14);
+    }
+  }
+
+  // legs
+  ctx.strokeStyle = suit;
+  ctx.lineWidth = 5;
+  ctx.lineCap='round';
+  const legA = p.chuteOpen ? p.legAngle : 0.5;
+  ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(-8+legA*10, 20); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(8-legA*10, 20); ctx.stroke();
+
+  // arms
+  const armA = p.chuteOpen ? -0.9 : -0.5;
+  ctx.beginPath(); ctx.moveTo(0,-16); ctx.lineTo(-16, -16+armA*20); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0,-16); ctx.lineTo(16, -16+armA*20); ctx.stroke();
+
+  // torso
+  ctx.strokeStyle = suit;
+  ctx.lineWidth=6;
+  ctx.beginPath(); ctx.moveTo(0,-16); ctx.lineTo(0,0); ctx.stroke();
+
+  // head
+  ctx.fillStyle = skin;
+  ctx.beginPath(); ctx.arc(0,-24,9,0,Math.PI*2); ctx.fill();
+
+  ctx.restore();
+}
+
+function drawWindHint(cfg){
+  if(cfg.wind<=0) return;
+  ctx.save();
+  ctx.globalAlpha=0.5;
+  ctx.strokeStyle='#ffffff';
+  ctx.lineWidth=2;
+  for(let i=0;i<3;i++){
+    const yy = 40+i*22;
+    const off = (performance.now()/12 + i*40)%60;
+    ctx.beginPath();
+    ctx.moveTo(20+off,yy);
+    ctx.lineTo(50+off,yy);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function draw(){
+  const cfg = state.cfg;
+  if(!cfg){ ctx.fillStyle='#0b1830'; ctx.fillRect(0,0,W,H); return; }
+  const theme = SCENERIES[cfg.scenery];
+
+  drawSky(theme);
+  drawWindHint(cfg);
+  drawGround(theme);
+  drawTarget(cfg, state.target);
+  drawPlayer(state.player);
+
+  // altitude bar
+  const p = state.player;
+  const pct = Math.max(0, Math.min(1, 1 - p.y/GROUND_Y));
+  ctx.fillStyle='rgba(255,255,255,0.15)';
+  ctx.fillRect(W-26,20,10,GROUND_Y-40);
+  ctx.fillStyle='#ffd166';
+  ctx.fillRect(W-26, 20+(GROUND_Y-40)*(1-pct), 10, (GROUND_Y-40)*pct);
+}
+
+// ---------------------------------------------------------------
+// Loop
+// ---------------------------------------------------------------
+let running = false;
+let lastT = 0;
+function frame(ts){
+  const dt = Math.min(32, ts-lastT); lastT = ts;
+  if(running) update(dt);
+  draw();
+  if(state.cfg){
+    hudStatus.textContent = state.phase==='falling' ? 'Free Falling' :
+      state.phase==='open' ? 'Steer to Target!' :
+      state.phase==='landed' ? 'Landed!' :
+      state.phase==='crashed' ? 'Crashed' : 'Get Ready';
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+})();
+</script>
+</body>
+</html>

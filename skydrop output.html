@@ -1,0 +1,2988 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>SkyDrop — 60 Level Parachute Challenge</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --sky-top:#3aa7e0;
+    --sky-bottom:#bfe8f7;
+    --navy:#132a4a;
+    --navy-2:#1c3a63;
+    --panel:#0f2340;
+    --cream:#fff6e8;
+    --orange:#ff8a4c;
+    --orange-2:#ff6a3d;
+    --mint:#4fd6a0;
+    --coral:#ff5f6d;
+    --gold:#ffd166;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0; padding:0;
+    height:100%;
+    height:100dvh;
+    background:radial-gradient(circle at 50% 0%, #204169, #081428 75%);
+    font-family:'Nunito', sans-serif;
+    color:var(--cream);
+    overflow:hidden;
+    -webkit-tap-highlight-color: transparent;
+    user-select:none;
+  }
+  h1,h2,h3,.display{ font-family:'Baloo 2', sans-serif; }
+
+  #app{
+    max-width:520px;
+    margin:0 auto;
+    height:100%;
+    height:100dvh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding:6px;
+  }
+
+  #gameWrap{
+    position:relative;
+    width:100%;
+    max-width:480px;
+    max-height:100%;
+    aspect-ratio: 480/800;
+    border-radius:18px;
+    overflow:hidden;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.45), 0 0 0 3px rgba(255,255,255,0.06) inset;
+    background:#000;
+  }
+
+  canvas{
+    display:block;
+    width:100%;
+    height:100%;
+  }
+
+  /* ---------- HUD ---------- */
+  #hud{
+    position:absolute; top:0; left:0; right:0;
+    display:flex; justify-content:space-between; align-items:flex-start;
+    padding:10px 14px;
+    pointer-events:none;
+    font-family:'Baloo 2', sans-serif;
+  }
+  .hudChip{
+    background:rgba(15,35,64,0.72);
+    backdrop-filter: blur(3px);
+    border-radius:10px;
+    padding:6px 12px;
+    font-weight:700;
+    font-size:15px;
+    letter-spacing:0.3px;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+  }
+  #hudLevel{ color:var(--gold); }
+  #hudTarget{ color:var(--cream); font-weight:600; font-size:13px; margin-top:4px; }
+
+  /* ---------- Touch controls ---------- */
+  #touchControls{
+    position:absolute; bottom:14px; left:0; right:0;
+    display:flex; justify-content:space-between; padding:0 16px;
+    pointer-events:none;
+  }
+  .padBtn{
+    pointer-events:auto;
+    width:64px; height:64px;
+    border-radius:50%;
+    background:rgba(255,255,255,0.12);
+    border:2px solid rgba(255,255,255,0.35);
+    color:#fff;
+    font-size:26px;
+    display:flex; align-items:center; justify-content:center;
+    backdrop-filter: blur(2px);
+    touch-action:none;
+  }
+  .padBtn:active{ background:rgba(255,255,255,0.3); }
+  .dodgeBtn{
+    background:rgba(127,232,255,0.22);
+    border-color:rgba(127,232,255,0.55);
+    font-size:24px;
+    transition: opacity 0.15s ease;
+  }
+  .diveBtn{
+    background:rgba(255,138,76,0.22);
+    border-color:rgba(255,138,76,0.55);
+    font-size:24px;
+  }
+  .diveBtn.active{ background:rgba(255,138,76,0.5); }
+
+  .shootBtn{
+    background:rgba(255,95,109,0.22);
+    border-color:rgba(255,95,109,0.55);
+    font-size:22px;
+    transition: opacity 0.15s ease;
+  }
+
+  #tutorialHint{
+    position:absolute; top:8%; left:0; right:0;
+    display:flex; justify-content:center;
+    pointer-events:none;
+    z-index:6;
+  }
+  .tutorialPanel{
+    background:rgba(15,35,64,0.82);
+    backdrop-filter: blur(3px);
+    border:1px solid rgba(255,255,255,0.14);
+    border-radius:14px;
+    padding:10px 16px;
+    min-width:190px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.35);
+    animation: tutorialPop 0.25s ease;
+  }
+  .tutorialPanelTitle{
+    font-family:'Baloo 2', sans-serif;
+    font-weight:700;
+    font-size:12px;
+    color:var(--gold);
+    text-align:center;
+    margin-bottom:6px;
+    letter-spacing:0.3px;
+  }
+  .tutorialItem{
+    display:flex; align-items:center; gap:8px;
+    font-size:13px; font-weight:600; color:#cfe0f2;
+    padding:3px 0;
+  }
+  .tutorialIcon{ min-width:20px; text-align:center; font-family:'Baloo 2'; }
+  .tutorialLabel{ flex:1; }
+  .tutorialCheck{ font-size:15px; color:#5b7699; transition: color 0.2s ease; }
+  .tutorialItem.done{ color:#8fe3b8; }
+  .tutorialItem.done .tutorialCheck{
+    color:var(--mint);
+    animation: tutorialCheckPop 0.35s ease;
+  }
+  @keyframes tutorialCheckPop{ from{ transform:scale(0.4); } to{ transform:scale(1); } }
+  @keyframes tutorialPop{ from{ transform:scale(0.85); opacity:0; } to{ transform:scale(1); opacity:1; } }
+
+  #jumpPrompt{
+    position:absolute; left:0; right:0; bottom:32%;
+    display:flex; justify-content:center;
+    z-index:7;
+  }
+  #jumpBtn{
+    font-family:'Baloo 2', sans-serif;
+    font-weight:800;
+    font-size:20px;
+    color:#12233d;
+    background:linear-gradient(180deg, var(--gold), var(--orange));
+    border:none;
+    padding:16px 30px;
+    border-radius:18px;
+    cursor:pointer;
+    box-shadow: 0 6px 0 #b8560f, 0 10px 22px rgba(0,0,0,0.4);
+    animation: jumpPulse 1s ease-in-out infinite;
+  }
+  #jumpBtn:active{ transform: translateY(4px); box-shadow: 0 2px 0 #b8560f; }
+  @keyframes jumpPulse{
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.06); }
+  }
+
+  /* ---------- Overlays ---------- */
+  .overlay{
+    position:absolute; inset:0;
+    background:linear-gradient(180deg, rgba(7,16,32,0.88), rgba(7,16,32,0.96));
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center;
+    padding:24px;
+    gap:14px;
+  }
+  .hidden{ display:none !important; }
+
+  #resultScreen.mood-sad{
+    background:linear-gradient(180deg, rgba(18,26,38,0.92), rgba(10,16,26,0.97));
+    animation: sadFadeIn 0.6s ease;
+  }
+  @keyframes sadFadeIn{ from{ opacity:0; transform:translateY(-6px); } to{ opacity:1; transform:translateY(0); } }
+  #sadRain{ position:absolute; top:0; left:0; right:0; height:120px; overflow:hidden; pointer-events:none; }
+  .sadCloud{
+    position:absolute; top:14px; left:50%; transform:translateX(-50%);
+    font-size:34px; opacity:0.55; filter:grayscale(0.4);
+  }
+  .raindrop{
+    position:absolute; top:40px; width:2px; height:16px;
+    background:linear-gradient(180deg, rgba(159,184,214,0), rgba(159,184,214,0.55));
+    animation: raindropFall 1.3s linear infinite;
+  }
+  @keyframes raindropFall{
+    0%{ transform:translateY(0); opacity:0; }
+    15%{ opacity:0.7; }
+    100%{ transform:translateY(70px); opacity:0; }
+  }
+
+  .titleLogo{
+    font-size:clamp(32px, 7vw, 52px);
+    font-weight:800;
+    color:var(--gold);
+    text-shadow: 0 4px 0 rgba(0,0,0,0.35);
+    letter-spacing:1px;
+    line-height:1;
+  }
+  .titleLogo span{ color:var(--orange); }
+  .subtitle{ color:#cfe4f7; font-size:14px; max-width:420px; font-weight:600; }
+
+  .rowPick{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:center; }
+
+  #introSteps{ display:flex; flex-direction:column; gap:10px; margin:6px 0; width:100%; max-width:340px; }
+  .introRow{
+    display:flex; align-items:center; gap:14px;
+    background:rgba(255,255,255,0.06);
+    border:1px solid rgba(255,255,255,0.12);
+    border-radius:12px;
+    padding:10px 14px;
+    text-align:left;
+    font-size:14px;
+    font-weight:600;
+    color:var(--cream);
+  }
+  .introIcon{
+    font-family:'Baloo 2', sans-serif;
+    font-weight:800;
+    color:var(--gold);
+    font-size:17px;
+    min-width:34px;
+    text-align:center;
+  }
+  .pickLabel{ font-family:'Baloo 2'; font-weight:700; color:var(--cream); font-size:14px; width:100%; }
+  .swatch{
+    width:34px; height:34px; border-radius:50%;
+    border:3px solid rgba(255,255,255,0.15);
+    cursor:pointer;
+  }
+  .swatch.selected{ border-color:var(--gold); transform:scale(1.12); }
+
+  .charOption{
+    width:56px; height:66px;
+    border-radius:12px;
+    border:3px solid rgba(255,255,255,0.15);
+    background:rgba(255,255,255,0.06);
+    cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    position:relative;
+  }
+  .charOption.selected{ border-color:var(--gold); background:rgba(255,209,102,0.15); }
+  .charOption.locked{ opacity:0.55; }
+  .charOption .lockTag{
+    position:absolute; bottom:-9px; left:50%; transform:translateX(-50%);
+    background:#12233d; color:var(--gold); font-size:10px; font-weight:800;
+    padding:1px 6px; border-radius:8px; white-space:nowrap;
+    border:1px solid rgba(255,209,102,0.4);
+  }
+
+  button.primary{
+    font-family:'Baloo 2', sans-serif;
+    font-weight:700;
+    font-size:19px;
+    color:#12233d;
+    background:linear-gradient(180deg, var(--gold), var(--orange));
+    border:none;
+    padding:12px 34px;
+    border-radius:14px;
+    cursor:pointer;
+    box-shadow: 0 6px 0 #b8560f, 0 10px 18px rgba(0,0,0,0.35);
+    transition: transform 0.06s ease;
+  }
+  button.primary:active{ transform: translateY(4px); box-shadow: 0 2px 0 #b8560f; }
+
+  button.secondary{
+    font-family:'Baloo 2', sans-serif;
+    font-weight:700;
+    font-size:15px;
+    color:var(--cream);
+    background:rgba(255,255,255,0.08);
+    border:2px solid rgba(255,255,255,0.25);
+    padding:9px 20px;
+    border-radius:12px;
+    cursor:pointer;
+  }
+
+  .soundToggle{ padding:7px 14px; font-size:13px; }
+  .soundToggle.selected{ border-color:var(--gold); background:rgba(255,209,102,0.18); color:var(--gold); }
+
+  .resultLinks{ display:flex; align-items:center; gap:8px; margin-top:2px; }
+  .linkBtn{
+    font-size:13px;
+    font-weight:700;
+    color:#9fb8d6;
+    text-decoration:underline;
+    text-underline-offset:3px;
+    cursor:pointer;
+    padding:6px 2px;
+  }
+  .linkBtn:active{ color:var(--cream); }
+  .linkDivider{ color:#5b7699; font-size:13px; }
+
+  .shopLink{
+    color: var(--gold);
+    font-size:14px;
+    text-decoration:none;
+    background:rgba(255,209,102,0.14);
+    border:1px solid rgba(255,209,102,0.4);
+    border-radius:10px;
+    padding:8px 14px;
+    margin-top:2px;
+  }
+  .shopLink:active{ background:rgba(255,209,102,0.28); }
+
+  .loadoutRow{ display:flex; gap:18px; justify-content:center; margin:2px 0; }
+  .loadoutSlot{ display:flex; flex-direction:column; align-items:center; gap:5px; }
+  .loadoutSlot span{ font-size:11px; font-weight:700; color:#9fb8d6; }
+  .loadoutSwatch{
+    width:46px; height:46px; border-radius:50%;
+    border:3px solid rgba(255,255,255,0.25);
+    box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+  }
+
+  #shopScreen{ padding-top:18px; padding-bottom:14px; }
+  .shopTabs{ display:flex; gap:8px; margin:4px 0 8px; }
+  .shopTabBtn{
+    font-family:'Baloo 2', sans-serif; font-weight:700; font-size:13px;
+    color:#9fb8d6; background:rgba(255,255,255,0.06);
+    border:2px solid rgba(255,255,255,0.15); border-radius:10px;
+    padding:7px 14px; cursor:pointer;
+  }
+  .shopTabBtn.selected{ color:var(--gold); border-color:var(--gold); background:rgba(255,209,102,0.15); }
+
+  .shopGrid{
+    display:grid; grid-template-columns:repeat(3, 1fr); gap:10px;
+    width:100%; max-width:420px; max-height:52vh; overflow-y:auto;
+    padding:6px; margin-bottom:8px;
+  }
+  .shopCard{
+    background:rgba(255,255,255,0.05);
+    border:2px solid rgba(255,255,255,0.12);
+    border-radius:12px;
+    padding:8px 6px;
+    text-align:center;
+    cursor:pointer;
+    position:relative;
+  }
+  .shopCard.selected{ border-color:var(--mint); background:rgba(79,214,160,0.14); }
+  .shopCard.premium{
+    border-color:rgba(255,209,102,0.5);
+    animation: premiumShimmer 2.4s ease-in-out infinite;
+  }
+  .shopCard.premium.selected{ border-color:var(--mint); animation:none; }
+  @keyframes premiumShimmer{
+    0%,100%{ box-shadow:0 0 0 0 rgba(255,209,102,0.35); }
+    50%{ box-shadow:0 0 10px 2px rgba(255,209,102,0.45); }
+  }
+  .shopSwatch{
+    width:38px; height:38px; border-radius:50%;
+    margin:0 auto 5px; border:2px solid rgba(255,255,255,0.25);
+  }
+  .shopName{ font-size:10.5px; font-weight:700; color:var(--cream); line-height:1.2; }
+  .shopTag{ font-size:10px; font-weight:800; margin-top:3px; }
+  .shopTag.free{ color:var(--mint); }
+  .shopTag.premium{ color:var(--gold); }
+  .shopAbility{ font-size:9px; color:#ffd166; margin-top:2px; line-height:1.2; }
+  .shopPreviewNote{ font-size:8.5px; color:#9fb8d6; margin-top:2px; font-style:italic; }
+
+  #resultTitle{ font-size:clamp(26px,6vw,38px); font-weight:800; font-family:'Baloo 2'; }
+  #resultTitle.win{ color:var(--mint); }
+  #resultTitle.fail{ color:var(--coral); }
+  #resultSub{ font-size:14px; color:#cfe4f7; font-weight:600; max-width:360px; }
+
+  .stars{ font-size:30px; letter-spacing:6px; height:36px; }
+  .stars .on{ color:var(--gold); text-shadow:0 2px 4px rgba(0,0,0,0.4); }
+  .stars .off{ color:rgba(255,255,255,0.2); }
+
+  .iconChip{ cursor:pointer; font-size:16px; padding:6px 11px; }
+  .iconChip:active{ background:rgba(255,255,255,0.25); }
+
+  #levelBanner{
+    position:absolute; top:44%; left:0; right:0;
+    text-align:center;
+    transform:translateY(-50%);
+    pointer-events:none;
+    font-family:'Baloo 2';
+  }
+  #levelBanner .num{ font-size:clamp(30px,7vw,50px); font-weight:800; color:#fff; text-shadow:0 4px 10px rgba(0,0,0,0.5);}
+  #levelBanner .name{ font-size:15px; font-weight:700; color:var(--gold); margin-top:4px; text-shadow:0 2px 6px rgba(0,0,0,0.5);}
+
+  footer.note{
+    margin-top:10px;
+    font-size:12px;
+    color:#8fb0d0;
+    text-align:center;
+    max-width:520px;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="gameWrap">
+    <canvas id="game" width="480" height="800"></canvas>
+
+    <div id="hud">
+      <div style="display:flex; gap:8px; align-items:center;">
+        <div class="hudChip iconChip" id="homeBtn" title="Menu">☰</div>
+        <div class="hudChip" id="hudLevel">Level 1 / 60</div>
+      </div>
+      <div style="text-align:right; display:flex; gap:8px; flex-direction:column; align-items:flex-end;">
+        <div class="hudChip" id="hudCoins">🪙 0</div>
+        <div class="hudChip" id="hudStatus">Get Ready</div>
+      </div>
+    </div>
+
+    <div id="levelBanner" class="hidden">
+      <div class="num" id="levelBannerNum">Level 1</div>
+      <div class="name" id="levelBannerName">Fixed Target</div>
+    </div>
+
+    <div id="tutorialHint" class="hidden">
+      <div class="tutorialPanel">
+        <div class="tutorialPanelTitle">Try every control!</div>
+        <div class="tutorialItem" id="tut-jump"><span class="tutorialIcon">🪂</span><span class="tutorialLabel">Jump from the plane</span><span class="tutorialCheck">○</span></div>
+        <div class="tutorialItem" id="tut-left"><span class="tutorialIcon">◀</span><span class="tutorialLabel">Steer left</span><span class="tutorialCheck">○</span></div>
+        <div class="tutorialItem" id="tut-right"><span class="tutorialIcon">▶</span><span class="tutorialLabel">Steer right</span><span class="tutorialCheck">○</span></div>
+        <div class="tutorialItem" id="tut-dodge"><span class="tutorialIcon">⤒</span><span class="tutorialLabel">Dodge</span><span class="tutorialCheck">○</span></div>
+        <div class="tutorialItem" id="tut-dive"><span class="tutorialIcon">⬇</span><span class="tutorialLabel">Dive faster</span><span class="tutorialCheck">○</span></div>
+      </div>
+    </div>
+
+    <div id="jumpPrompt" class="hidden">
+      <button id="jumpBtn" type="button">🪂 TAP TO JUMP</button>
+    </div>
+
+    <div id="touchControls">
+      <div class="padBtn" id="btnLeft">◀</div>
+      <div class="padBtn dodgeBtn" id="btnDodge">⤒</div>
+      <div class="padBtn shootBtn hidden" id="btnShoot">🔫</div>
+      <div class="padBtn diveBtn" id="btnDive">⬇</div>
+      <div class="padBtn" id="btnRight">▶</div>
+    </div>
+
+    <!-- INTRO / HOW TO PLAY -->
+    <!-- START SCREEN -->
+    <div id="startScreen" class="overlay">
+      <div class="titleLogo">SKY<span>DROP</span></div>
+      <div class="subtitle">60 levels. Nail the landing on every one.</div>
+
+      <div class="hudChip" id="startCoins" style="font-size:15px;">🪙 0 coins</div>
+
+      <div class="rowPick">
+        <div class="pickLabel">Sound style</div>
+        <button class="secondary soundToggle selected" id="soundRealistic" type="button">🎧 Realistic</button>
+        <button class="secondary soundToggle" id="sound8bit" type="button">🎮 8-bit</button>
+      </div>
+
+      <div class="loadoutRow">
+        <div class="loadoutSlot"><div class="loadoutSwatch" id="loadoutChar"></div><span>Jumper</span></div>
+        <div class="loadoutSlot"><div class="loadoutSwatch" id="loadoutChute"></div><span>Chute</span></div>
+        <div class="loadoutSlot"><div class="loadoutSwatch" id="loadoutPlane"></div><span>Flight</span></div>
+        <div class="loadoutSlot"><div class="loadoutSwatch" id="loadoutGun"></div><span>Blaster</span></div>
+      </div>
+      <button class="secondary" id="openShopBtn">🛒 Open Shop</button>
+
+      <button class="primary" id="startBtn">Start Jumping</button>
+    </div>
+
+    <!-- SHOP -->
+    <div id="shopScreen" class="overlay hidden">
+      <div class="titleLogo" style="font-size:28px;">🛒 SHOP</div>
+      <div class="hudChip" id="shopCoins" style="font-size:14px;">🪙 0 coins</div>
+      <div class="shopTabs">
+        <button class="shopTabBtn selected" data-tab="char" type="button">Jumpers</button>
+        <button class="shopTabBtn" data-tab="chute" type="button">Chutes</button>
+        <button class="shopTabBtn" data-tab="plane" type="button">Flights</button>
+        <button class="shopTabBtn" data-tab="gun" type="button">Blasters</button>
+      </div>
+      <div id="shopGrid" class="shopGrid"></div>
+      <button class="secondary" id="watchAdCoinsBtn" style="border-color:var(--gold); color:var(--gold);">📺 Watch Ad for 50 Free Coins</button>
+      <button class="primary" id="closeShopBtn">Done</button>
+    </div>
+
+    <!-- PURCHASE PROMPT -->
+    <div id="purchasePrompt" class="overlay hidden" style="z-index:20;">
+      <div class="titleLogo" style="font-size:22px;">💳 Premium Item</div>
+      <div class="subtitle" id="purchasePromptText" style="max-width:320px;"></div>
+      <button class="primary" id="purchasePreviewBtn">Preview it anyway (no charge)</button>
+      <button class="secondary" id="purchaseCancelBtn">Cancel</button>
+    </div>
+
+    <!-- REWARDED AD (placeholder — real ad network required in production) -->
+    <div id="adOverlay" class="overlay hidden" style="z-index:25; background:#050810;">
+      <div class="titleLogo" style="font-size:22px;">📺 Ad Playing…</div>
+      <div class="subtitle" style="max-width:300px;">Placeholder rewarded ad. A real ad network (AdMob, Unity Ads, etc.) needs to be integrated once this ships as a real app — ads can't actually be served from inside this browser preview.</div>
+      <div class="hudChip" id="adCountdown" style="font-size:22px; min-width:44px;">5</div>
+      <button class="primary hidden" id="adClaimBtn">🎁 Claim Reward</button>
+      <span class="linkBtn" id="adCancelBtn">Cancel</span>
+    </div>
+
+    <!-- RESULT SCREEN -->
+    <div id="resultScreen" class="overlay hidden">
+      <div id="sadRain" class="hidden">
+        <div class="raindrop" style="left:20%; animation-delay:0s;"></div>
+        <div class="raindrop" style="left:38%; animation-delay:0.3s;"></div>
+        <div class="raindrop" style="left:55%; animation-delay:0.15s;"></div>
+        <div class="raindrop" style="left:70%; animation-delay:0.45s;"></div>
+        <div class="raindrop" style="left:85%; animation-delay:0.6s;"></div>
+        <div class="sadCloud">☁️</div>
+      </div>
+      <div id="resultTitle">Nice Landing!</div>
+      <div id="resultStars" class="stars"></div>
+      <div id="resultSub">You stuck the landing on the target.</div>
+      <div id="resultCoins" class="hudChip" style="display:none;"></div>
+      <button class="secondary shopLink hidden" id="watchAdDoubleBtn" style="border-color:var(--gold); color:var(--gold);">📺 Watch Ad to Double These Coins</button>
+      <div class="linkBtn shopLink hidden" id="shopLink">🛒 Spend your coins in the Shop</div>
+      <button class="primary" id="nextBtn">Next Level</button>
+      <button class="secondary" id="retryBtn">↻ Retry Level</button>
+      <div class="resultLinks">
+        <span class="linkBtn" id="restartBtn">Restart from Level 1</span>
+        <span class="linkDivider">·</span>
+        <span class="linkBtn" id="homeFromResultBtn">Go Home</span>
+      </div>
+    </div>
+
+    <!-- WIN SCREEN -->
+    <div id="winScreen" class="overlay hidden">
+      <div class="titleLogo">ALL <span>60</span> CLEARED!</div>
+      <div class="subtitle">You landed every target from a still bullseye to a speeding ship at sea. You're SkyDrop's top jumper.</div>
+      <button class="primary" id="playAgainBtn">Jump From Level 1</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+// ---------------------------------------------------------------
+// Sound effects — all synthesized with Web Audio API, no audio files
+// ---------------------------------------------------------------
+const SFX = (function(){
+  let ctx = null, noiseBuffer = null;
+  let plane = null, wind = null;
+  let spaceSend = null; // shared short-echo bus that key sounds route a bit of signal through for more "produced" depth
+
+  function ensure(){
+    if(!ctx){
+      ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const size = ctx.sampleRate*2;
+      noiseBuffer = ctx.createBuffer(1, size, ctx.sampleRate);
+      const data = noiseBuffer.getChannelData(0);
+      for(let i=0;i<size;i++) data[i] = Math.random()*2-1;
+
+      // a small feedback delay standing in for a light room/space reverb
+      const delay = ctx.createDelay(1.0);
+      delay.delayTime.value = 0.13;
+      const feedback = ctx.createGain();
+      feedback.gain.value = 0.3;
+      const wet = ctx.createGain();
+      wet.gain.value = 1;
+      delay.connect(feedback).connect(delay);
+      delay.connect(wet).connect(ctx.destination);
+      spaceSend = { delay, wet };
+    }
+    if(ctx.state==='suspended') ctx.resume();
+    return ctx;
+  }
+
+  // route a slice of a sound into the shared space bus for extra shimmer/depth
+  function toSpace(node, amount){
+    const g = ctx.createGain();
+    g.gain.value = amount;
+    node.connect(g).connect(spaceSend.delay);
+  }
+
+  // fade a gain to a target then optionally stop the source nodes after — avoids clicky cutoffs
+  function fadeAndStop(gainNode, sources, fadeSec){
+    if(!ctx) return;
+    const t = ctx.currentTime;
+    try{
+      gainNode.gain.cancelScheduledValues(t);
+      gainNode.gain.setValueAtTime(Math.max(gainNode.gain.value, 0.0001), t);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, t+fadeSec);
+    }catch(e){}
+    sources.filter(Boolean).forEach(n=>{ try{ n.stop(t+fadeSec+0.02); }catch(e){} });
+  }
+
+  function planeStart(){
+    ensure();
+    planeStop();
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    osc.type = 'sawtooth';
+    osc.frequency.value = 92;
+    const osc2 = ctx.createOscillator(); // second detuned layer for a fuller engine tone
+    osc2.type = 'square';
+    osc2.frequency.value = 46;
+    const lfo = ctx.createOscillator();
+    lfo.frequency.value = 6.5;
+    const lfoGain = ctx.createGain();
+    lfoGain.gain.value = 5;
+    lfo.connect(lfoGain).connect(osc.frequency);
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(0.05, t+0.2);
+    const gain2 = ctx.createGain();
+    gain2.gain.value = 0.02;
+    osc.connect(gain).connect(ctx.destination);
+    osc2.connect(gain2).connect(gain).connect(ctx.destination);
+    osc.start(); osc2.start(); lfo.start();
+    plane = {osc, osc2, lfo, gain};
+  }
+  function planeStop(){
+    if(!plane) return;
+    fadeAndStop(plane.gain, [plane.osc, plane.osc2, plane.lfo], 0.15);
+    plane = null;
+  }
+
+  function windStart(){
+    ensure();
+    windStop();
+    const t = ctx.currentTime;
+    const src = ctx.createBufferSource();
+    src.buffer = noiseBuffer;
+    src.loop = true;
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.value = 420;
+    filter.Q.value = 0.5;
+    // slow LFO on the filter for a natural gusting feel instead of a flat hiss
+    const gustLFO = ctx.createOscillator();
+    gustLFO.frequency.value = 0.18;
+    const gustGain = ctx.createGain();
+    gustGain.gain.value = 90;
+    gustLFO.connect(gustGain).connect(filter.frequency);
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(0.032, t+0.25);
+    src.connect(filter).connect(gain).connect(ctx.destination);
+    src.start(); gustLFO.start();
+    wind = {src, filter, gain, gustLFO, baseGain:0.032};
+  }
+  function windStop(){
+    if(!wind) return;
+    fadeAndStop(wind.gain, [wind.src, wind.gustLFO], 0.18);
+    wind = null;
+  }
+  // called each frame while gliding — a touch louder whoosh while actively steering
+  function windSetIntensity(speedFrac){
+    if(!wind || !ctx) return;
+    const target = wind.baseGain * (1 + Math.min(1, speedFrac)*0.9);
+    try{ wind.gain.gain.setTargetAtTime(target, ctx.currentTime, 0.25); }catch(e){}
+  }
+
+  function chuteOpen(){
+    ensure();
+    const t = ctx.currentTime;
+    // low percussive thump — the canopy catching air
+    const thump = ctx.createOscillator();
+    thump.type = 'sine';
+    thump.frequency.setValueAtTime(150, t);
+    thump.frequency.exponentialRampToValueAtTime(70, t+0.14);
+    const thumpGain = ctx.createGain();
+    thumpGain.gain.setValueAtTime(0.001, t);
+    thumpGain.gain.exponentialRampToValueAtTime(0.32, t+0.015);
+    thumpGain.gain.exponentialRampToValueAtTime(0.0001, t+0.18);
+    thump.connect(thumpGain).connect(ctx.destination);
+    thump.start(t); thump.stop(t+0.2);
+    toSpace(thumpGain, 0.25);
+
+    // fabric whoosh sweep
+    const src = ctx.createBufferSource();
+    src.buffer = noiseBuffer;
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(2600, t);
+    filter.frequency.exponentialRampToValueAtTime(160, t+0.4);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.26, t+0.05);
+    g.gain.exponentialRampToValueAtTime(0.0001, t+0.45);
+    src.connect(filter).connect(g).connect(ctx.destination);
+    src.start(t); src.stop(t+0.47);
+
+    // brief fluttering canopy texture
+    const flutter = ctx.createBufferSource();
+    flutter.buffer = noiseBuffer;
+    const flutterFilter = ctx.createBiquadFilter();
+    flutterFilter.type = 'bandpass';
+    flutterFilter.Q.value = 4;
+    flutterFilter.frequency.setValueAtTime(900, t);
+    const flutterLFO = ctx.createOscillator();
+    flutterLFO.frequency.value = 14;
+    const flutterLFOGain = ctx.createGain();
+    flutterLFOGain.gain.value = 300;
+    flutterLFO.connect(flutterLFOGain).connect(flutterFilter.frequency);
+    const flutterGain = ctx.createGain();
+    flutterGain.gain.setValueAtTime(0.0001, t);
+    flutterGain.gain.exponentialRampToValueAtTime(0.09, t+0.06);
+    flutterGain.gain.exponentialRampToValueAtTime(0.0001, t+0.3);
+    flutter.connect(flutterFilter).connect(flutterGain).connect(ctx.destination);
+    flutterLFO.start(t); flutter.start(t);
+    flutter.stop(t+0.32); flutterLFO.stop(t+0.32);
+  }
+
+  // a bright little "ding" for coins earned — separate from the level-clear fanfare
+  function coinCollect(){
+    ensure();
+    const t = ctx.currentTime;
+    [988.0, 1318.5].forEach((freq,i)=>{
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      const g = ctx.createGain();
+      const start = t + i*0.07;
+      g.gain.setValueAtTime(0.0001, start);
+      g.gain.exponentialRampToValueAtTime(0.24, start+0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, start+0.22);
+      osc.connect(g).connect(ctx.destination);
+      osc.start(start); osc.stop(start+0.24);
+    });
+  }
+
+  // one light "tick" per coin as it flies into the balance — quieter than the full collect ding
+  function coinTick(){
+    ensure();
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(1100, t);
+    osc.frequency.exponentialRampToValueAtTime(1500, t+0.06);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.16, t+0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, t+0.11);
+    osc.connect(g).connect(ctx.destination);
+    osc.start(t); osc.stop(t+0.12);
+  }
+
+  // a rising "whoosh" the instant you leap out of the plane — sells the dive
+  function jumpWhoosh(){
+    ensure();
+    const t = ctx.currentTime;
+    const src = ctx.createBufferSource();
+    src.buffer = noiseBuffer;
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.Q.value = 0.8;
+    filter.frequency.setValueAtTime(220, t);
+    filter.frequency.exponentialRampToValueAtTime(1400, t+0.35);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.22, t+0.08);
+    g.gain.exponentialRampToValueAtTime(0.0001, t+0.4);
+    src.connect(filter).connect(g).connect(ctx.destination);
+    src.start(t); src.stop(t+0.42);
+  }
+
+  // a grounded low thump right at touchdown, before the win/fail stinger plays
+  function landingThump(){
+    ensure();
+    const t = ctx.currentTime;
+    const thud = ctx.createOscillator();
+    thud.type = 'sine';
+    thud.frequency.setValueAtTime(100, t);
+    thud.frequency.exponentialRampToValueAtTime(38, t+0.18);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.28, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t+0.22);
+    thud.connect(g).connect(ctx.destination);
+    thud.start(t); thud.stop(t+0.24);
+    toSpace(g, 0.35);
+
+    // a short percussive click layered on top for more physical punch
+    const click = ctx.createBufferSource();
+    click.buffer = noiseBuffer;
+    const clickFilter = ctx.createBiquadFilter();
+    clickFilter.type = 'bandpass';
+    clickFilter.frequency.value = 1800;
+    clickFilter.Q.value = 1.2;
+    const cg = ctx.createGain();
+    cg.gain.setValueAtTime(0.22, t);
+    cg.gain.exponentialRampToValueAtTime(0.0001, t+0.05);
+    click.connect(clickFilter).connect(cg).connect(ctx.destination);
+    click.start(t); click.stop(t+0.06);
+  }
+
+  function victory(){
+    ensure();
+    const t = ctx.currentTime;
+    // rising sparkle arpeggio
+    [523.25, 659.25, 783.99, 1046.5, 1318.5].forEach((freq,i)=>{
+      const osc = ctx.createOscillator();
+      osc.type = 'triangle';
+      osc.frequency.value = freq;
+      const shimmer = ctx.createOscillator();
+      shimmer.type = 'sine';
+      shimmer.frequency.value = freq*2;
+      const g = ctx.createGain();
+      const sg = ctx.createGain();
+      const start = t + i*0.09;
+      g.gain.setValueAtTime(0.0001, start);
+      g.gain.exponentialRampToValueAtTime(0.22, start+0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, start+0.26);
+      sg.gain.setValueAtTime(0.0001, start);
+      sg.gain.exponentialRampToValueAtTime(0.07, start+0.02);
+      sg.gain.exponentialRampToValueAtTime(0.0001, start+0.22);
+      osc.connect(g).connect(ctx.destination);
+      shimmer.connect(sg).connect(ctx.destination);
+      osc.start(start); osc.stop(start+0.28);
+      shimmer.start(start); shimmer.stop(start+0.24);
+      toSpace(g, 0.22);
+    });
+    // final held chord "ta-da"
+    const chordStart = t + 5*0.09 + 0.05;
+    [783.99, 1046.5, 1318.5].forEach(freq=>{
+      const osc = ctx.createOscillator();
+      osc.type = 'triangle';
+      osc.frequency.value = freq;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, chordStart);
+      g.gain.exponentialRampToValueAtTime(0.18, chordStart+0.03);
+      g.gain.exponentialRampToValueAtTime(0.0001, chordStart+0.55);
+      osc.connect(g).connect(ctx.destination);
+      osc.start(chordStart); osc.stop(chordStart+0.58);
+      toSpace(g, 0.3);
+    });
+  }
+
+  // hit a bird/balloon mid-air — light, comedic "boop"
+  function obstacleHit(){
+    ensure();
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(420, t);
+    osc.frequency.exponentialRampToValueAtTime(110, t+0.16);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.2, t+0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001, t+0.2);
+    osc.connect(g).connect(ctx.destination);
+    osc.start(t); osc.stop(t+0.22);
+
+    const puff = ctx.createBufferSource();
+    puff.buffer = noiseBuffer;
+    const puffFilter = ctx.createBiquadFilter();
+    puffFilter.type = 'highpass';
+    puffFilter.frequency.value = 1200;
+    const puffGain = ctx.createGain();
+    puffGain.gain.setValueAtTime(0.0001, t);
+    puffGain.gain.exponentialRampToValueAtTime(0.15, t+0.01);
+    puffGain.gain.exponentialRampToValueAtTime(0.0001, t+0.14);
+    puff.connect(puffFilter).connect(puffGain).connect(ctx.destination);
+    puff.start(t); puff.stop(t+0.16);
+  }
+
+  // a quick laser zap for the blaster — one for a confirmed hit, a softer
+  // whiff version for firing with nothing in range
+  function shootHit(){
+    ensure();
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(1400, t);
+    osc.frequency.exponentialRampToValueAtTime(220, t+0.09);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.22, t+0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, t+0.11);
+    osc.connect(g).connect(ctx.destination);
+    osc.start(t); osc.stop(t+0.12);
+    // little pop as the obstacle is destroyed
+    const pop = ctx.createBufferSource();
+    pop.buffer = noiseBuffer;
+    const popFilter = ctx.createBiquadFilter();
+    popFilter.type = 'highpass'; popFilter.frequency.value = 900;
+    const popGain = ctx.createGain();
+    popGain.gain.setValueAtTime(0.0001, t+0.08);
+    popGain.gain.exponentialRampToValueAtTime(0.18, t+0.09);
+    popGain.gain.exponentialRampToValueAtTime(0.0001, t+0.16);
+    pop.connect(popFilter).connect(popGain).connect(ctx.destination);
+    pop.start(t+0.08); pop.stop(t+0.18);
+  }
+  function shootMiss(){
+    ensure();
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(900, t);
+    osc.frequency.exponentialRampToValueAtTime(300, t+0.06);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.1, t+0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, t+0.08);
+    osc.connect(g).connect(ctx.destination);
+    osc.start(t); osc.stop(t+0.09);
+  }
+
+  // missed the moving target — classic descending "sad trombone"
+  function missedTarget(){
+    ensure();
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    osc.type = 'sawtooth';
+    const steps = [349.23, 329.63, 293.66, 261.63]; // F4 E4 D4 C4, gliding down
+    osc.frequency.setValueAtTime(steps[0], t);
+    steps.forEach((freq,i)=>{
+      if(i===0) return;
+      osc.frequency.exponentialRampToValueAtTime(freq, t + i*0.22);
+    });
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.2, t+0.05);
+    g.gain.setValueAtTime(0.2, t + steps.length*0.22 - 0.15);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + steps.length*0.22 + 0.1);
+    osc.connect(g).connect(ctx.destination);
+    osc.start(t); osc.stop(t + steps.length*0.22 + 0.15);
+  }
+
+  // hit the ground hard without ever opening the chute — a heavier thud
+  function crashGround(){
+    ensure();
+    const t = ctx.currentTime;
+    const thud = ctx.createOscillator();
+    thud.type = 'sine';
+    thud.frequency.setValueAtTime(120, t);
+    thud.frequency.exponentialRampToValueAtTime(35, t+0.3);
+    const tg = ctx.createGain();
+    tg.gain.setValueAtTime(0.35, t);
+    tg.gain.exponentialRampToValueAtTime(0.0001, t+0.35);
+    thud.connect(tg).connect(ctx.destination);
+    thud.start(t); thud.stop(t+0.37);
+
+    const crunch = ctx.createBufferSource();
+    crunch.buffer = noiseBuffer;
+    const crunchFilter = ctx.createBiquadFilter();
+    crunchFilter.type = 'lowpass';
+    crunchFilter.frequency.setValueAtTime(1500, t);
+    crunchFilter.frequency.exponentialRampToValueAtTime(200, t+0.3);
+    const crunchGain = ctx.createGain();
+    crunchGain.gain.setValueAtTime(0.001, t);
+    crunchGain.gain.exponentialRampToValueAtTime(0.28, t+0.02);
+    crunchGain.gain.exponentialRampToValueAtTime(0.0001, t+0.32);
+    crunch.connect(crunchFilter).connect(crunchGain).connect(ctx.destination);
+    crunch.start(t); crunch.stop(t+0.34);
+  }
+
+  // ---- tiny helper for chiptune-style square-wave blips ----
+  function blip(freq, start, dur, peak, type){
+    const osc = ctx.createOscillator();
+    osc.type = type || 'square';
+    osc.frequency.setValueAtTime(freq, start);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, start);
+    g.gain.exponentialRampToValueAtTime(peak, start+0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, start+dur);
+    osc.connect(g).connect(ctx.destination);
+    osc.start(start); osc.stop(start+dur+0.02);
+  }
+
+  // ---- original 8-bit / chiptune style variants (not Nintendo's sounds — our own melodies) ----
+  function chuteOpen8bit(){
+    ensure();
+    const t = ctx.currentTime;
+    [440, 587.33, 740].forEach((f,i)=> blip(f, t+i*0.05, 0.09, 0.18));
+  }
+  function coinCollect8bit(){
+    ensure();
+    const t = ctx.currentTime;
+    [988, 1318.5].forEach((f,i)=> blip(f, t+i*0.055, 0.09, 0.2));
+  }
+  function coinTick8bit(){
+    ensure();
+    blip(1200, ctx.currentTime, 0.06, 0.16);
+  }
+  function victory8bit(){
+    ensure();
+    const t = ctx.currentTime;
+    const notes = [523.25,523.25,523.25,659.25,783.99,1046.5,1318.5];
+    notes.forEach((f,i)=> blip(f, t+i*0.09, 0.12, 0.16));
+    blip(1567.98, t+notes.length*0.09+0.02, 0.42, 0.18);
+  }
+  function obstacleHit8bit(){
+    ensure();
+    const t = ctx.currentTime;
+    blip(300, t, 0.06, 0.2);
+    blip(180, t+0.06, 0.1, 0.2);
+  }
+  function shootHit8bit(){
+    ensure();
+    const t = ctx.currentTime;
+    blip(1400, t, 0.05, 0.2, 'sawtooth');
+    blip(220, t+0.05, 0.07, 0.16);
+  }
+  function shootMiss8bit(){
+    ensure();
+    blip(700, ctx.currentTime, 0.06, 0.12, 'sawtooth');
+  }
+  function missedTarget8bit(){
+    ensure();
+    const t = ctx.currentTime;
+    [392, 349.23, 311.13, 261.63, 220].forEach((f,i)=> blip(f, t+i*0.12, 0.14, 0.18));
+  }
+  function crashGround8bit(){
+    ensure();
+    const t = ctx.currentTime;
+    for(let i=0;i<10;i++){
+      const f = Math.max(40, 300 - i*22 + (Math.random()*30-15));
+      blip(f, t+i*0.03, 0.05, 0.16);
+    }
+  }
+  function planeStart8bit(){
+    ensure();
+    planeStop();
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    osc.type = 'square';
+    osc.frequency.value = 110;
+    const stepper = ctx.createOscillator(); // wobbles the pitch to fake a chugging pulse engine
+    stepper.type = 'square';
+    stepper.frequency.value = 8;
+    const stepGain = ctx.createGain();
+    stepGain.gain.value = 20;
+    stepper.connect(stepGain).connect(osc.frequency);
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(0.06, t+0.15);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(); stepper.start();
+    plane = {osc, osc2:stepper, lfo:null, gain};
+  }
+
+  let mode = 'realistic'; // 'realistic' | '8bit'
+  function setMode(m){ mode = (m==='8bit') ? '8bit' : 'realistic'; }
+  function getMode(){ return mode; }
+
+  function planeStartPublic(){ mode==='8bit' ? planeStart8bit() : planeStart(); }
+  function chuteOpenPublic(){ mode==='8bit' ? chuteOpen8bit() : chuteOpen(); }
+  function coinCollectPublic(){ mode==='8bit' ? coinCollect8bit() : coinCollect(); }
+  function coinTickPublic(){ mode==='8bit' ? coinTick8bit() : coinTick(); }
+  function victoryPublic(){ mode==='8bit' ? victory8bit() : victory(); }
+  function obstacleHitPublic(){ mode==='8bit' ? obstacleHit8bit() : obstacleHit(); }
+  function shootHitPublic(){ mode==='8bit' ? shootHit8bit() : shootHit(); }
+  function shootMissPublic(){ mode==='8bit' ? shootMiss8bit() : shootMiss(); }
+  function missedTargetPublic(){ mode==='8bit' ? missedTarget8bit() : missedTarget(); }
+  function crashGroundPublic(){ mode==='8bit' ? crashGround8bit() : crashGround(); }
+
+  function stopAll(){ planeStop(); windStop(); }
+
+  return { ensure, setMode, getMode,
+    planeStart: planeStartPublic, planeStop, windStart, windStop, windSetIntensity,
+    chuteOpen: chuteOpenPublic, coinCollect: coinCollectPublic, coinTick: coinTickPublic, victory: victoryPublic,
+    obstacleHit: obstacleHitPublic, shootHit: shootHitPublic, shootMiss: shootMissPublic,
+    missedTarget: missedTargetPublic, crashGround: crashGroundPublic,
+    jumpWhoosh, landingThump, stopAll };
+})();
+
+// ---------------------------------------------------------------
+// Shop catalog — 30 characters, 30 parachutes, 30 plane skins.
+// First 8 of each are free. The rest are "premium" (real-money) items
+// with an escalating price and a small special ability. NOTE: this file
+// cannot process real payments — there's no way to safely charge a card
+// from a browser artifact. Premium items are marked and priced, ready to
+// wire up to real Apple/Google/Stripe billing once this is a real app.
+// ---------------------------------------------------------------
+function hsl(h,s,l){ return 'hsl(' + Math.round(h) + ',' + s + '%,' + l + '%)'; }
+const SKIN_NAME_ADJ = ['Crimson','Golden','Azure','Emerald','Violet','Blazing','Frosty','Shadow','Solar','Neon','Cosmic','Coral','Midnight','Electric','Rose','Amber','Jade','Silver','Ruby','Sapphire','Turquoise','Scarlet','Obsidian','Ivory','Copper','Plasma','Lunar','Volcanic','Arctic','Radiant'];
+const ABILITY_POOL = ['🪙 +15% Coins','🛡️ +1s Shield','💨 Stronger Dive','✨ Sparkle Trail','⭐ Golden Glow'];
+
+function buildCatalog(freeColors, count, freeCount, hueStart, sat, light, basePriceCents, priceStepCents, nameSuffix){
+  const list = [];
+  for(let i=0;i<count;i++){
+    const free = i < freeCount;
+    const color = free ? freeColors[i % freeColors.length] : hsl(hueStart + (i-freeCount)*(300/(count-freeCount)), sat, light);
+    const item = { color, name: SKIN_NAME_ADJ[i % SKIN_NAME_ADJ.length] + ' ' + nameSuffix, free };
+    if(!free){
+      const tier = Math.floor((i-freeCount)/4);
+      item.price = ((basePriceCents + tier*priceStepCents)/100).toFixed(2);
+      item.ability = ABILITY_POOL[i % ABILITY_POOL.length];
+    }
+    list.push(item);
+  }
+  return list;
+}
+
+const CHAR_SKIN_TONES = ['#ffd6a5','#8d5524','#f1c27d','#ffe0bd','#c68642','#ffdfc4','#6b4226','#e0ac69'];
+const CHAR_SUIT_FREE  = ['#ff6a3d','#4fd6a0','#7c9bff','#ff5f9e','#ffd166','#9b6bff','#3ddc97','#ff4757'];
+const CHAR_LIST = buildCatalog(CHAR_SUIT_FREE, 30, 8, 12, 72, 56, 99, 40, 'Jumper')
+  .map((it,i)=>({ ...it, skin: CHAR_SKIN_TONES[i % CHAR_SKIN_TONES.length] }));
+
+const CHUTE_FREE = ['#ff6a3d','#4fd6a0','#ffd166','#7c9bff','#ff5f9e','#ffffff','#ff8a4c','#5be3c9'];
+const CHUTE_LIST = buildCatalog(CHUTE_FREE, 30, 8, 205, 82, 60, 79, 30, 'Canopy');
+
+const PLANE_FREE = ['#3f6fae','#4fb8ea','#6fc7e6','#3aa7d0','#7c9bff','#5be3c9','#4c8fd6','#8ecae6'];
+const PLANE_LIST = buildCatalog(PLANE_FREE, 30, 8, 30, 68, 52, 149, 50, 'Flyer');
+
+const GUN_FREE = ['#9aa3ad','#4c8fd6','#4fd6a0','#ff6a3d','#ffd166','#7c9bff','#ff5f9e','#5be3c9'];
+const GUN_LIST = buildCatalog(GUN_FREE, 30, 8, 15, 75, 54, 129, 45, 'Blaster');
+
+function activeAbilities(){
+  return [CHAR_LIST[state.chosenChar], CHUTE_LIST[state.chosenChuteIdx], PLANE_LIST[state.chosenPlaneIdx], GUN_LIST[state.chosenGunIdx]]
+    .filter(it => it && it.ability)
+    .map(it => it.ability);
+}
+
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
+const GROUND_Y = H - 90;
+
+// Fit the game box to the actual phone/browser viewport, keeping the
+// native 480:800 portrait ratio so nothing stretches or gets cropped.
+function fitGameWrap(){
+  const wrap = document.getElementById('gameWrap');
+  const ratio = 480/800;
+  const availW = document.getElementById('app').clientWidth - 4;
+  const availH = document.getElementById('app').clientHeight - 4;
+  let w = Math.min(availW, 480);
+  let h = w/ratio;
+  if(h > availH){ h = availH; w = h*ratio; }
+  wrap.style.width = w+'px';
+  wrap.style.height = h+'px';
+}
+window.addEventListener('resize', fitGameWrap);
+window.addEventListener('orientationchange', ()=> setTimeout(fitGameWrap,150));
+fitGameWrap();
+
+// ---------------------------------------------------------------
+// Config: scenery themes, vehicle types, characters, parachutes
+// ---------------------------------------------------------------
+const SCENERIES = {
+  city: { sky:['#4fb8ea','#bfe8f7'], ground:'#5a6a78', groundTop:'#6d7f8e', deco:'buildings' },
+  desert:{ sky:['#f5a85a','#ffe1b0'], ground:'#d9b06a', groundTop:'#e6c483', deco:'dunes' },
+  forest:{ sky:['#6fc7e6','#d7f3ea'], ground:'#4f9159', groundTop:'#5fae6c', deco:'trees' },
+  sea:   { sky:['#3aa7d0','#cdeffa'], ground:'#1f6fa8', groundTop:'#2c86c4', deco:'waves' },
+  snow:  { sky:['#8fb9d6','#eaf4fb'], ground:'#e7eef4', groundTop:'#ffffff', deco:'snow' },
+  night: { sky:['#0d1b3a','#294a7a'], ground:'#3a3f52', groundTop:'#484f66', deco:'lights' }
+};
+
+
+// Vehicle drawing registry. Each returns visual half-width used for hit-testing.
+const VEHICLES = ['fixed','car','van','truck','train','boat','ship'];
+
+// ---------------------------------------------------------------
+// Level generation (procedural, 60 levels)
+// ---------------------------------------------------------------
+function generateLevel(n){
+  // n: 1..60
+  let type, scenery, speed, halfWidth, wind, label;
+
+  if(n <= 8){
+    type = 'fixed';
+    scenery = ['forest','desert','city'][n % 3];
+    speed = 0;
+    halfWidth = Math.max(46, 78 - n*3);
+    wind = 0;
+    label = 'Fixed Target';
+  } else if(n <= 18){
+    type = 'car';
+    scenery = 'desert';
+    speed = 1.1 + (n-9)*0.16;
+    halfWidth = Math.max(40, 60 - (n-9)*1.1);
+    wind = 0;
+    label = 'Moving Car';
+  } else if(n <= 28){
+    type = 'van';
+    scenery = 'city';
+    speed = 1.3 + (n-19)*0.15;
+    halfWidth = Math.max(42, 66 - (n-19)*1.1);
+    wind = (n>24)? (n-24)*0.03 : 0;
+    label = 'Delivery Van';
+  } else if(n <= 37){
+    type = 'truck';
+    scenery = 'desert';
+    speed = 1.5 + (n-29)*0.14;
+    halfWidth = Math.max(46, 74 - (n-29)*1.0);
+    wind = (n-29)*0.035;
+    label = 'Long Haul Truck';
+  } else if(n <= 47){
+    type = 'train';
+    scenery = 'forest';
+    speed = 2.0 + (n-38)*0.17;
+    halfWidth = Math.max(50, 90 - (n-38)*1.2);
+    wind = (n-38)*0.04;
+    label = 'Speeding Train';
+  } else if(n <= 54){
+    type = 'boat';
+    scenery = 'sea';
+    speed = 1.6 + (n-48)*0.2;
+    halfWidth = Math.max(36, 56 - (n-48)*1.3);
+    wind = 0.25 + (n-48)*0.05;
+    label = 'Bobbing Boat';
+  } else {
+    type = 'ship';
+    scenery = (n>=58)? 'night' : 'sea';
+    speed = 1.8 + (n-55)*0.22;
+    halfWidth = Math.max(34, 50 - (n-55)*1.2);
+    wind = 0.35 + (n-55)*0.06;
+    label = 'Cargo Ship';
+  }
+
+  // sway amplitude for target's back-and-forth motion
+  const range = W*0.62;
+  return { n, type, scenery, speed, halfWidth, wind, label, range };
+}
+
+// ---------------------------------------------------------------
+// Game state
+// ---------------------------------------------------------------
+let state = {
+  level: 1,
+  chosenChar: 0,
+  chosenChuteIdx: 0,
+  chosenPlaneIdx: 0,
+  chosenGunIdx: 0,
+  previewedPremium: { char: new Set(), chute: new Set(), plane: new Set(), gun: new Set() },
+  shopTab: 'char',
+  cfg: null,
+  player: null,
+  target: null,
+  plane: null,
+  phase: 'idle', // idle | plane | falling | open | landed | crashed
+  keys: {left:false, right:false, dive:false},
+  windPhase: 0,
+  shakeT: 0,
+  cloudX: 0,
+  obstacles: [],
+  highlightTarget: false,
+  coinFly: [],
+  confetti: [],
+  shotFx: [],
+  shootEnabled: false,
+  camera: { scale:1, targetScale:1, panX:0, targetPanX:0, panY:0, targetPanY:0, shakeT:0, shakeMag:0, nudgeX:0, nudgeY:0, nudgeUntil:0, nudgeDuration:550 },
+  jumpRequested: false,
+  coins: 0
+};
+
+function makeObstacles(n){
+  // fewer max obstacles, slower ramp, and a guaranteed minimum vertical gap
+  // between them so there's always a real path down — no more solid walls.
+  const count = n<=2 ? 0 : Math.min(5, 1 + Math.floor((n-3)/7));
+  if(count===0) return [];
+
+  const desiredGap = 95;
+  const topY = state.player.openAt + 90; // obstacles only start after the chute is open
+  const bottomY = GROUND_Y - 150;
+  let gap = desiredGap;
+  if(count>1){
+    const avail = bottomY - topY;
+    gap = Math.max(45, Math.min(desiredGap, avail/(count-1)));
+  }
+
+  const list = [];
+  const patterns = ['horizontal','diagonal','sine']; // real variety in flight paths, not just left-right
+  for(let i=0;i<count;i++){
+    const y = topY + i*gap + (Math.random()*gap*0.3 - gap*0.15);
+    const speed = 0.8 + Math.min(1.9, n*0.025) + Math.random()*0.3;
+    list.push({
+      x: 60 + Math.random()*(W-120),
+      y,
+      baseY: y,
+      dir: Math.random()>0.5?1:-1,
+      dirY: Math.random()>0.5?1:-1,
+      speed,
+      vSpeed: speed * 0.55,
+      radius: 14,
+      type: ['bird','balloon','bee'][i % 3],
+      flap:Math.random()*10,
+      pattern: patterns[i % patterns.length],
+      sinePhase: Math.random()*Math.PI*2,
+      sineAmp: 16 + Math.random()*14
+    });
+  }
+  return list;
+}
+
+function resetPlayerForLevel(){
+  const cfg = state.cfg;
+  const planeY = 40;
+
+  // Target position — the plane's flight line always crosses the whole
+  // screen, so wherever the target sits, timing the jump over it is a real,
+  // learnable skill rather than a fixed pre-set drop point.
+  const startX = W*0.5 + (Math.random()>0.5?1:-1)*cfg.range*0.25;
+  const targetX = cfg.type==='fixed' ? (W*0.3 + Math.random()*W*0.4) : startX;
+  state.target = {
+    x: targetX,
+    dir: Math.random()>0.5?1:-1,
+    baseY: GROUND_Y,
+    bob: 0
+  };
+
+  const fromLeft = (cfg.n % 2 === 0);
+  const planeStartX = fromLeft ? -110 : W+110;
+  state.plane = {
+    x: planeStartX,
+    y: planeY,
+    dir: fromLeft ? 1 : -1,
+    speed: (fromLeft ? 1 : -1) * 1.3, // slower, more relaxed flyover
+    exitX: fromLeft ? W+150 : -150,   // if you never jump, it flies off and drops you here as a fail-safe
+    dropped: false
+  };
+  state.player = {
+    x: planeStartX,
+    y: planeY,
+    vx: 0,
+    vy: 2.2,
+    chuteOpen: false,
+    openAt: GROUND_Y - 430 - Math.random()*50,
+    legAngle:0,
+    shieldUntil: 0,
+    dodgeUntil: 0,
+    dodgeCooldownUntil: 0,
+    shootCooldownUntil: 0
+  };
+  state.jumpRequested = false;
+  state.obstacles = makeObstacles(cfg.n);
+  state.shootEnabled = state.obstacles.length > 2;
+  state.phase = 'plane';
+  SFX.planeStart();
+}
+
+function loadLevel(n){
+  state.level = n;
+  state.cfg = generateLevel(n);
+  resetPlayerForLevel();
+  showLevelBanner(state.cfg);
+  updateHud();
+  state.keys.left = false;
+  state.keys.right = false;
+  state.keys.dive = false;
+  running = true;
+  if(n === 1) startTutorial(); else stopTutorial();
+}
+
+// ---------------------------------------------------------------
+// UI wiring
+// ---------------------------------------------------------------
+const startScreen = document.getElementById('startScreen');
+const resultScreen = document.getElementById('resultScreen');
+const winScreen = document.getElementById('winScreen');
+const levelBanner = document.getElementById('levelBanner');
+const hudLevel = document.getElementById('hudLevel');
+const hudStatus = document.getElementById('hudStatus');
+const hudCoins = document.getElementById('hudCoins');
+const startCoins = document.getElementById('startCoins');
+
+function updateCoinHud(){
+  hudCoins.textContent = '🪙 ' + state.coins;
+  startCoins.textContent = '🪙 ' + state.coins + ' coins';
+  const shopCoins = document.getElementById('shopCoins');
+  if(shopCoins) shopCoins.textContent = '🪙 ' + state.coins + ' coins';
+}
+
+const SHOP_LISTS = { char: CHAR_LIST, chute: CHUTE_LIST, plane: PLANE_LIST, gun: GUN_LIST };
+function renderShop(){
+  const grid = document.getElementById('shopGrid');
+  const list = SHOP_LISTS[state.shopTab];
+  const chosenIdx = state.shopTab==='char' ? state.chosenChar
+    : state.shopTab==='chute' ? state.chosenChuteIdx
+    : state.shopTab==='plane' ? state.chosenPlaneIdx
+    : state.chosenGunIdx;
+  const previewSet = state.previewedPremium[state.shopTab];
+  grid.innerHTML = '';
+  list.forEach((item, idx)=>{
+    const card = document.createElement('div');
+    card.className = 'shopCard' + (idx===chosenIdx ? ' selected' : '') + (!item.free ? ' premium' : '');
+    const swatchStyle = state.shopTab==='char'
+      ? ('background:linear-gradient(135deg,'+item.skin+' 0 40%,'+item.color+' 40%)')
+      : ('background:'+item.color);
+    const ownedOrFree = item.free || previewSet.has(idx);
+    card.innerHTML =
+      '<div class="shopSwatch" style="'+swatchStyle+'"></div>' +
+      '<div class="shopName">'+item.name+'</div>' +
+      (item.free
+        ? '<div class="shopTag free">FREE</div>'
+        : '<div class="shopTag premium">$'+item.price+'</div>') +
+      (item.ability ? '<div class="shopAbility">'+item.ability+'</div>' : '') +
+      (ownedOrFree ? '' : '<div class="shopPreviewNote">preview only</div>');
+    card.addEventListener('click', ()=>{
+      if(item.free || previewSet.has(idx)){
+        selectShopItem(state.shopTab, idx);
+        renderShop();
+        return;
+      }
+      showPurchasePrompt(state.shopTab, idx, item);
+    });
+    grid.appendChild(card);
+  });
+}
+function selectShopItem(tab, idx){
+  if(tab==='char') state.chosenChar = idx;
+  else if(tab==='chute') state.chosenChuteIdx = idx;
+  else if(tab==='plane') state.chosenPlaneIdx = idx;
+  else state.chosenGunIdx = idx;
+}
+function showPurchasePrompt(tab, idx, item){
+  const el = document.getElementById('purchasePrompt');
+  document.getElementById('purchasePromptText').textContent =
+    item.name + ' — $' + item.price + '. Real-money purchases need real app-store billing, which isn\'t available in this browser preview.';
+  el.classList.remove('hidden');
+  el.dataset.tab = tab; el.dataset.idx = idx;
+}
+document.getElementById('purchasePreviewBtn').addEventListener('click', ()=>{
+  const el = document.getElementById('purchasePrompt');
+  const tab = el.dataset.tab, idx = parseInt(el.dataset.idx,10);
+  state.previewedPremium[tab].add(idx);
+  selectShopItem(tab, idx);
+  el.classList.add('hidden');
+  renderShop();
+});
+document.getElementById('purchaseCancelBtn').addEventListener('click', ()=>{
+  document.getElementById('purchasePrompt').classList.add('hidden');
+});
+document.querySelectorAll('.shopTabBtn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.shopTabBtn').forEach(b=>b.classList.remove('selected'));
+    btn.classList.add('selected');
+    state.shopTab = btn.dataset.tab;
+    renderShop();
+  });
+});
+function openShop(){
+  document.getElementById('shopScreen').classList.remove('hidden');
+  renderShop();
+  updateAdCoinsBtnState();
+}
+document.getElementById('openShopBtn').addEventListener('click', openShop);
+document.getElementById('closeShopBtn').addEventListener('click', ()=>{
+  document.getElementById('shopScreen').classList.add('hidden');
+  renderLoadoutPreview();
+});
+
+// ---------------------------------------------------------------
+// Rewarded ads — a fully working placeholder flow (countdown, skip-blocked,
+// claim button, reward callback). NOTE: this cannot actually serve or play
+// real ads inside a browser artifact — a real ad network (AdMob, Unity Ads,
+// etc.) needs to be wired in here once this ships as a real app. Everything
+// else (the UI, the timing, the reward hooks) is ready to go.
+// ---------------------------------------------------------------
+let adRewardCallback = null;
+let adCountdownInterval = null;
+function showRewardedAd(seconds, onReward){
+  adRewardCallback = onReward;
+  const overlay = document.getElementById('adOverlay');
+  const countdownEl = document.getElementById('adCountdown');
+  const claimBtn = document.getElementById('adClaimBtn');
+  overlay.classList.remove('hidden');
+  claimBtn.classList.add('hidden');
+  let remaining = seconds;
+  countdownEl.textContent = remaining;
+  clearInterval(adCountdownInterval);
+  adCountdownInterval = setInterval(()=>{
+    remaining--;
+    if(remaining <= 0){
+      clearInterval(adCountdownInterval);
+      countdownEl.textContent = '✓';
+      claimBtn.classList.remove('hidden');
+    } else {
+      countdownEl.textContent = remaining;
+    }
+  }, 1000);
+}
+document.getElementById('adClaimBtn').addEventListener('click', ()=>{
+  document.getElementById('adOverlay').classList.add('hidden');
+  const cb = adRewardCallback;
+  adRewardCallback = null;
+  if(cb) cb();
+});
+document.getElementById('adCancelBtn').addEventListener('click', ()=>{
+  clearInterval(adCountdownInterval);
+  adRewardCallback = null;
+  document.getElementById('adOverlay').classList.add('hidden');
+});
+
+// Placement 1: double the coins you just earned, once per level result
+let lastCoinsEarned = 0;
+let adDoubleUsedThisResult = false;
+document.getElementById('watchAdDoubleBtn').addEventListener('click', ()=>{
+  showRewardedAd(4, ()=>{
+    state.coins += lastCoinsEarned;
+    updateCoinHud();
+    adDoubleUsedThisResult = true;
+    document.getElementById('watchAdDoubleBtn').classList.add('hidden');
+    document.getElementById('resultCoins').textContent = '🪙 +' + (lastCoinsEarned*2) + ' (doubled!)  (total ' + state.coins + ')';
+    SFX.coinCollect();
+  });
+});
+
+// Placement 2: a flat free-coins ad in the shop, on a real cooldown so it
+// can't just be spammed
+let adCoinsCooldownUntil = 0;
+function updateAdCoinsBtnState(){
+  const btn = document.getElementById('watchAdCoinsBtn');
+  const now = performance.now();
+  const ready = now >= adCoinsCooldownUntil;
+  btn.disabled = !ready;
+  btn.style.opacity = ready ? '1' : '0.5';
+  btn.textContent = ready ? '📺 Watch Ad for 50 Free Coins' : '📺 Come back in a bit for another ad';
+}
+document.getElementById('watchAdCoinsBtn').addEventListener('click', ()=>{
+  if(performance.now() < adCoinsCooldownUntil) return;
+  showRewardedAd(4, ()=>{
+    state.coins += 50;
+    updateCoinHud();
+    adCoinsCooldownUntil = performance.now() + 60000; // 60s cooldown so it's not infinitely farmable
+    updateAdCoinsBtnState();
+    SFX.coinCollect();
+  });
+});
+
+function renderLoadoutPreview(){
+  const c = CHAR_LIST[state.chosenChar], p = CHUTE_LIST[state.chosenChuteIdx], f = PLANE_LIST[state.chosenPlaneIdx], g = GUN_LIST[state.chosenGunIdx];
+  document.getElementById('loadoutChar').style.background = 'linear-gradient(135deg,'+c.skin+' 0 40%,'+c.color+' 40%)';
+  document.getElementById('loadoutChute').style.background = p.color;
+  document.getElementById('loadoutPlane').style.background = f.color;
+  document.getElementById('loadoutGun').style.background = g.color;
+}
+renderLoadoutPreview();
+
+document.getElementById('soundRealistic').addEventListener('click', ()=>{
+  SFX.setMode('realistic');
+  document.getElementById('soundRealistic').classList.add('selected');
+  document.getElementById('sound8bit').classList.remove('selected');
+});
+document.getElementById('sound8bit').addEventListener('click', ()=>{
+  SFX.setMode('8bit');
+  document.getElementById('sound8bit').classList.add('selected');
+  document.getElementById('soundRealistic').classList.remove('selected');
+  SFX.ensure();
+  SFX.chuteOpen(); // quick preview blip so you can hear the style right away
+});
+
+document.getElementById('startBtn').addEventListener('click', ()=>{
+  SFX.ensure(); // audio needs a user gesture to unlock — this click is it
+  startScreen.classList.add('hidden');
+  loadLevel(1);
+  running = true;
+});
+document.getElementById('nextBtn').addEventListener('click', ()=>{
+  resultScreen.classList.add('hidden');
+  if(state.level >= 60){
+    winScreen.classList.remove('hidden');
+  } else {
+    loadLevel(state.level+1);
+  }
+});
+document.getElementById('retryBtn').addEventListener('click', ()=>{
+  resultScreen.classList.add('hidden');
+  loadLevel(state.level);
+});
+document.getElementById('playAgainBtn').addEventListener('click', ()=>{
+  winScreen.classList.add('hidden');
+  loadLevel(1);
+});
+function goHome(){
+  running = false;
+  state.phase = 'idle';
+  SFX.stopAll();
+  resultScreen.classList.add('hidden');
+  winScreen.classList.add('hidden');
+  updateCoinHud();
+  renderLoadoutPreview();
+  startScreen.classList.remove('hidden');
+}
+document.getElementById('homeBtn').addEventListener('click', goHome);
+document.getElementById('homeFromResultBtn').addEventListener('click', goHome);
+document.getElementById('shopLink').addEventListener('click', ()=>{
+  goHome();
+  openShop();
+});
+document.getElementById('restartBtn').addEventListener('click', ()=>{
+  resultScreen.classList.add('hidden');
+  loadLevel(1); // coins earned so far are kept — just the level count resets
+});
+
+let blasterHintShown = false;
+function showLevelBanner(cfg){
+  document.getElementById('levelBannerNum').textContent = 'Level ' + cfg.n;
+  let subtitle = cfg.type==='fixed' ? 'Fixed Target' : cfg.label;
+  if(state.shootEnabled && !blasterHintShown){
+    subtitle += '  ·  🔫 Blaster unlocked!';
+    blasterHintShown = true;
+    levelBanner.classList.remove('hidden');
+    clearTimeout(showLevelBanner._t);
+    showLevelBanner._t = setTimeout(()=> levelBanner.classList.add('hidden'), 2600); // hold a bit longer for the extra text
+    document.getElementById('levelBannerName').textContent = subtitle;
+    return;
+  }
+  document.getElementById('levelBannerName').textContent = subtitle;
+  levelBanner.classList.remove('hidden');
+  clearTimeout(showLevelBanner._t);
+  showLevelBanner._t = setTimeout(()=> levelBanner.classList.add('hidden'), 1400);
+}
+function updateHud(){
+  hudLevel.textContent = 'Level ' + state.level + ' / 60';
+}
+
+// ---------------------------------------------------------------
+// Level 1 on-screen demo — an interactive checklist, not a notice
+// board. Each item only ticks off once the player actually performs
+// that action for real during their first flight; nothing advances
+// on a timer.
+// ---------------------------------------------------------------
+const TUTORIAL_KEYS = ['jump','left','right','dodge','dive'];
+let tutorialProgress = {};
+function startTutorial(){
+  if(state.level !== 1) return;
+  tutorialProgress = {};
+  TUTORIAL_KEYS.forEach(k=>{
+    const el = document.getElementById('tut-'+k);
+    el.classList.remove('done');
+    el.querySelector('.tutorialCheck').textContent = '○';
+  });
+  document.getElementById('tutorialHint').classList.remove('hidden');
+  state.highlightTarget = true;
+}
+const TUTORIAL_NUDGE = {
+  left:  [-22, 0],
+  right: [ 22, 0],
+  jump:  [ 0, -16],
+  dodge: [ 0, -16],
+  dive:  [ 0,  16]
+};
+function markTutorialDone(key){
+  if(state.level !== 1 || tutorialProgress[key]) return;
+  tutorialProgress[key] = true;
+  const el = document.getElementById('tut-'+key);
+  if(el){
+    el.classList.add('done');
+    el.querySelector('.tutorialCheck').textContent = '✓';
+  }
+  const nudge = TUTORIAL_NUDGE[key];
+  if(nudge) triggerCameraNudge(nudge[0], nudge[1]);
+  if(TUTORIAL_KEYS.every(k=>tutorialProgress[k])){
+    setTimeout(stopTutorial, 700); // brief pause so the last checkmark is seen
+  }
+}
+function stopTutorial(){
+  document.getElementById('tutorialHint').classList.add('hidden');
+  state.highlightTarget = false;
+}
+
+// ---------------------------------------------------------------
+// Input
+// ---------------------------------------------------------------
+window.addEventListener('keydown', e=>{
+  if(e.code==='ArrowLeft'||e.code==='KeyA'){ state.keys.left = true; markTutorialDone('left'); }
+  if(e.code==='ArrowRight'||e.code==='KeyD'){ state.keys.right = true; markTutorialDone('right'); }
+  if(e.code==='ArrowDown'||e.code==='KeyS'){ e.preventDefault(); setDive(true); }
+  if(e.code==='KeyF'){ e.preventDefault(); triggerShoot(); }
+  if(e.code==='ArrowUp'||e.code==='KeyW'||e.code==='Space'){
+    e.preventDefault();
+    if(state.phase==='plane') triggerJump(); else triggerDodge();
+  }
+});
+window.addEventListener('keyup', e=>{
+  if(e.code==='ArrowLeft'||e.code==='KeyA') state.keys.left = false;
+  if(e.code==='ArrowRight'||e.code==='KeyD') state.keys.right = false;
+  if(e.code==='ArrowDown'||e.code==='KeyS') setDive(false);
+});
+function triggerJump(){
+  if(state.phase!=='plane') return;
+  state.jumpRequested = true;
+  markTutorialDone('jump');
+}
+const jumpBtnEl = document.getElementById('jumpBtn');
+const jumpPromptEl = document.getElementById('jumpPrompt');
+function jumpTap(e){ e.preventDefault(); triggerJump(); }
+jumpBtnEl.addEventListener('touchstart', jumpTap, {passive:false});
+jumpBtnEl.addEventListener('mousedown', jumpTap);
+function setDive(v){
+  state.keys.dive = v;
+  btnDiveEl.classList.toggle('active', v);
+  if(v) markTutorialDone('dive');
+}
+function triggerDodge(){
+  const p = state.player;
+  if(!p || state.phase!=='open') return;
+  const now = performance.now();
+  if(now < (p.dodgeCooldownUntil||0)) return;
+  p.dodgeUntil = now + 620; // longer hang-time on the lift so it actually clears obstacles comfortably
+  p.dodgeCooldownUntil = now + 1750;
+  markTutorialDone('dodge');
+}
+// Shoot down the nearest obstacle instead of just dodging around it — handy
+// once several obstacles are on screen at once.
+function triggerShoot(){
+  const p = state.player;
+  if(!p || state.phase!=='open' || !state.shootEnabled) return;
+  const now = performance.now();
+  if(now < (p.shootCooldownUntil||0)) return;
+  let closest = null, closestDist = Infinity;
+  state.obstacles.forEach(o=>{
+    const d = Math.hypot(p.x-o.x, p.y-o.y);
+    if(d < closestDist){ closestDist = d; closest = o; }
+  });
+  p.shootCooldownUntil = now + 550;
+  if(!closest || closestDist > 260) { SFX.shootMiss(); return; } // fired, but nothing in range
+  state.obstacles = state.obstacles.filter(o => o !== closest);
+  state.shotFx.push({ fromX:p.x, fromY:p.y-10, toX:closest.x, toY:closest.y, start:now, duration:140, color: GUN_LIST[state.chosenGunIdx].color });
+  SFX.shootHit();
+}
+const btnDodgeEl = document.getElementById('btnDodge');
+const btnDiveEl = document.getElementById('btnDive');
+const btnShootEl = document.getElementById('btnShoot');
+function dodgeTap(e){ e.preventDefault(); triggerDodge(); }
+btnDodgeEl.addEventListener('touchstart', dodgeTap, {passive:false});
+btnDodgeEl.addEventListener('mousedown', dodgeTap);
+function shootTap(e){ e.preventDefault(); triggerShoot(); }
+btnShootEl.addEventListener('touchstart', shootTap, {passive:false});
+btnShootEl.addEventListener('mousedown', shootTap);
+function bindPad(el, key){
+  const set = v => e => { e.preventDefault(); state.keys[key]=v; if(v) markTutorialDone(key); };
+  el.addEventListener('touchstart', set(true), {passive:false});
+  el.addEventListener('touchend', set(false), {passive:false});
+  el.addEventListener('touchcancel', set(false), {passive:false});
+  el.addEventListener('mousedown', set(true));
+  el.addEventListener('mouseup', set(false));
+  el.addEventListener('mouseleave', set(false));
+}
+bindPad(document.getElementById('btnLeft'), 'left');
+bindPad(document.getElementById('btnRight'), 'right');
+function bindDivePad(el){
+  const set = v => e => { e.preventDefault(); setDive(v); };
+  el.addEventListener('touchstart', set(true), {passive:false});
+  el.addEventListener('touchend', set(false), {passive:false});
+  el.addEventListener('touchcancel', set(false), {passive:false});
+  el.addEventListener('mousedown', set(true));
+  el.addEventListener('mouseup', set(false));
+  el.addEventListener('mouseleave', set(false));
+}
+bindDivePad(btnDiveEl);
+
+// ---------------------------------------------------------------
+// Physics / update
+// ---------------------------------------------------------------
+function updateTarget(cfg, t, dtScale){
+  if(cfg.type==='fixed'){ t.bob += 0.02*dtScale; return; }
+  const minX = W*0.14 + cfg.halfWidth;
+  const maxX = W*0.86 - cfg.halfWidth;
+  t.x += t.dir * cfg.speed * dtScale;
+  if(t.x < minX){ t.x = minX; t.dir = 1; }
+  if(t.x > maxX){ t.x = maxX; t.dir = -1; }
+  t.bob += 0.06*dtScale;
+}
+
+function updateObstacles(dtScale){
+  const margin = 40;
+  state.obstacles.forEach(o=>{
+    o.x += o.dir*o.speed*dtScale;
+    if(o.x < margin){ o.x = margin; o.dir = 1; }
+    if(o.x > W-margin){ o.x = W-margin; o.dir = -1; }
+    o.flap += 0.15*dtScale;
+
+    if(o.pattern==='diagonal'){
+      // bounces on both axes — a genuinely diagonal flight path
+      o.y += o.dirY * o.vSpeed * dtScale;
+      const top = o.baseY - 38, bottom = o.baseY + 38;
+      if(o.y < top){ o.y = top; o.dirY = 1; }
+      if(o.y > bottom){ o.y = bottom; o.dirY = -1; }
+    } else if(o.pattern==='sine'){
+      // undulating wave-like flight while still moving left/right
+      o.sinePhase += 0.045 * dtScale;
+      o.y = o.baseY + Math.sin(o.sinePhase) * o.sineAmp;
+    }
+    // 'horizontal' pattern: y stays put, exactly like before
+  });
+}
+
+function checkObstacleHit(p){
+  for(const o of state.obstacles){
+    const d = Math.hypot(p.x-o.x, p.y-14-o.y);
+    if(d < o.radius+15) return o;
+  }
+  return null;
+}
+
+function update(dt){
+  const cfg = state.cfg;
+  if(!cfg) return;
+  const p = state.player;
+  // Every velocity in this function is expressed as "pixels per 60fps frame".
+  // dtScale converts the actual elapsed time into that same unit, so the
+  // game behaves identically on a 60Hz, 90Hz, or 120Hz screen — physics
+  // stays tied to real elapsed seconds, not to however many frames fired.
+  const dtScale = Math.max(0.4, Math.min(2.2, dt / 16.6667));
+
+  // Plane flyover: character rides the plane, and jumps whenever the player
+  // decides to — tap the jump button, press Space/Up, or (as a fail-safe so
+  // the game never stalls) it auto-drops you once the plane exits the screen.
+  if(state.phase==='plane'){
+    const pl = state.plane;
+    pl.x += pl.speed * dtScale;
+    p.x = pl.x; p.y = pl.y;
+    const pastExit = pl.dir>0 ? pl.x >= pl.exitX : pl.x <= pl.exitX;
+    if(state.jumpRequested || pastExit){
+      state.jumpRequested = false;
+      pl.dropped = true;
+      state.phase = 'falling';
+      p.vx = pl.speed * 1.4; // you inherit real momentum from the plane — jumping alone isn't enough, you must steer to correct for the drift
+      p.vy = 2.4;
+      SFX.planeStop();
+      SFX.jumpWhoosh();
+      SFX.windStart();
+    }
+    return;
+  }
+
+  if(state.phase!=='falling' && state.phase!=='open') return;
+
+  // keep animating the plane flying off-screen after the drop, purely visual
+  if(state.plane && state.plane.dropped){
+    state.plane.x += state.plane.speed * dtScale;
+  }
+
+  updateTarget(cfg, state.target, dtScale);
+  updateObstacles(dtScale);
+  state.windPhase += 0.02*dtScale;
+
+  if(!p.chuteOpen && p.y >= p.openAt){
+    p.chuteOpen = true;
+    state.phase = 'open';
+    SFX.chuteOpen();
+    // Real canopies sink at a fairly steady rate — pick a realistic total
+    // glide time (3 to 4.5s) for this jump and derive the fall speed that
+    // achieves it, rather than using one fixed speed for every level.
+    // Expressed in the same "px per 60fps frame" unit as everything else,
+    // so it lands in 3–4.5 real seconds regardless of device frame rate.
+    const remaining = (GROUND_Y - 6) - p.y;
+    const targetSeconds = 3 + Math.random()*1.5;
+    p.glideVy = remaining / (targetSeconds * 60);
+    // Shield only matters once levels get hectic — none in the easy levels,
+    // ramping up gradually as obstacles get more common in harder levels.
+    const shieldMs = Math.max(0, Math.min(1600, (cfg.n - 14) * 45)) + (activeAbilities().includes('🛡️ +1s Shield') ? 1000 : 0);
+    p.shieldUntil = performance.now() + shieldMs;
+  }
+
+  const now = performance.now();
+  const dodging = now < p.dodgeUntil;
+  const diving = state.keys.dive && p.chuteOpen && !dodging;
+
+  if(!p.chuteOpen){
+    p.vy = 4.6;
+    p.vx *= Math.pow(0.98, dtScale);
+  } else if(dodging){
+    p.vy = -1.1; // tuck legs up and hop over obstacles
+    p.vx *= Math.pow(0.96, dtScale);
+  } else {
+    const baseVy = diving ? p.glideVy * (activeAbilities().includes('💨 Stronger Dive') ? 2.5 : 1.9) : p.glideVy;
+    // flare: ease off in the final stretch before touchdown for a gentler,
+    // more patient landing instead of hitting the ground at full speed
+    const remaining = Math.max(0, (GROUND_Y - 6) - p.y);
+    const flareZone = 90;
+    const flareFactor = remaining < flareZone ? Math.max(0.4, remaining/flareZone) : 1;
+    p.vy = baseVy * flareFactor;
+    const accel = 0.16 * dtScale;
+    if(state.keys.left) p.vx -= accel;
+    if(state.keys.right) p.vx += accel;
+    p.vx *= Math.pow(0.94, dtScale);
+    p.vx = Math.max(-3.2, Math.min(3.2, p.vx));
+    // wind drift
+    p.vx += Math.sin(state.windPhase)*cfg.wind*0.15*dtScale;
+    SFX.windSetIntensity(Math.abs(p.vx)/3.2 + (diving ? 0.5 : 0));
+  }
+
+  p.x += p.vx * dtScale;
+  p.y += p.vy * dtScale;
+  if(p.y < p.openAt-70) p.y = p.openAt-70; // dodge hop can't overshoot too far up
+  p.legAngle = Math.sin(performance.now()/120)*0.2;
+
+  const margin = 22;
+  if(p.x < margin) { p.x = margin; p.vx = 0; }
+  if(p.x > W-margin) { p.x = W-margin; p.vx = 0; }
+
+  if(p.chuteOpen){
+    const invulnerable = now < p.shieldUntil || dodging;
+    if(!invulnerable){
+      const hit = checkObstacleHit(p);
+      if(hit){ crashObstacle(hit); return; }
+    }
+  }
+
+  if(p.y >= GROUND_Y - 6){
+    p.y = GROUND_Y - 6;
+    landCheck();
+  }
+}
+
+function crashObstacle(o){
+  state.phase = 'crashed';
+  running = false;
+  stopTutorial();
+  state.camera.shakeT = 200; state.camera.shakeMag = 5;
+  SFX.windStop();
+  SFX.obstacleHit();
+  draw();
+  setTimeout(()=>{
+    const resultTitle = document.getElementById('resultTitle');
+    const resultSub = document.getElementById('resultSub');
+    const resultStars = document.getElementById('resultStars');
+    const resultCoins = document.getElementById('resultCoins');
+    const nextBtn = document.getElementById('nextBtn');
+    resultTitle.textContent = 'Hit an Obstacle!';
+    resultTitle.className = 'fail';
+    resultSub.textContent = 'You clipped a ' + (o.type==='bird'?'bird':o.type==='bee'?'bee':'balloon') + ' mid-air. Steer around them next time.';
+    resultStars.innerHTML = '';
+    resultCoins.style.display = 'none';
+    nextBtn.classList.add('hidden');
+    document.getElementById('retryBtn').classList.remove('secondary');
+    document.getElementById('retryBtn').classList.add('primary');
+    document.getElementById('shopLink').classList.add('hidden');
+    document.getElementById('watchAdDoubleBtn').classList.add('hidden');
+    resultScreen.classList.add('mood-sad');
+    document.getElementById('sadRain').classList.remove('hidden');
+    resultScreen.classList.remove('hidden');
+  }, 300);
+}
+
+function starsForAccuracy(dx, halfWidth){
+  if(dx <= halfWidth*0.28) return 3;
+  if(dx <= halfWidth*0.62) return 2;
+  return 1;
+}
+
+function renderStars(container, count){
+  let html = '';
+  for(let i=0;i<3;i++){ html += '<span class="'+(i<count?'on':'off')+'">★</span>'; }
+  container.innerHTML = html;
+}
+
+function spawnConfetti(x, y){
+  const now = performance.now();
+  const colors = ['#ff6a3d','#4fd6a0','#ffd166','#7c9bff','#ff5f9e','#5be3c9'];
+  for(let i=0;i<16;i++){
+    state.confetti.push({
+      x, y,
+      vx: (Math.random()*2-1)*2.4,
+      vy: -3 - Math.random()*2.5,
+      color: colors[i % colors.length],
+      rot: Math.random()*Math.PI*2,
+      vr: (Math.random()*2-1)*0.25,
+      start: now + Math.random()*80,
+      duration: 900 + Math.random()*450
+    });
+  }
+}
+function updateAndDrawConfetti(){
+  if(state.confetti.length===0) return;
+  const now = performance.now();
+  state.confetti = state.confetti.filter(c=>{
+    const elapsed = now - c.start;
+    if(elapsed < 0) return true; // hasn't launched yet, keep waiting
+    if(elapsed > c.duration) return false;
+    const t = elapsed/16.6667; // frames-equivalent, matches the rest of the game's units
+    const px = c.x + c.vx*t;
+    const py = c.y + c.vy*t + 0.055*t*t; // gentle gravity arc
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, 1 - elapsed/c.duration);
+    ctx.translate(px, py);
+    ctx.rotate(c.rot + c.vr*t);
+    ctx.fillStyle = c.color;
+    ctx.fillRect(-3,-2,6,4);
+    ctx.restore();
+    return true;
+  });
+}
+
+function spawnCoinFly(fromX, fromY, totalCoins, onDone){
+  const count = Math.max(3, Math.min(8, Math.round(totalCoins/6)));
+  const targetX = W - 55; // approximate on-canvas position of the 🪙 HUD chip
+  const targetY = 26;
+  const startTime = performance.now();
+  state.coinFlyPerCoin = totalCoins / count;
+  state.coinFlyAccum = 0;
+  state.coinFlyDone = onDone;
+  for(let i=0;i<count;i++){
+    state.coinFly.push({ fromX, fromY, targetX, targetY, start: startTime + i*75, duration: 520 });
+  }
+}
+
+function updateAndDrawCoinFly(){
+  if(state.coinFly.length===0) return;
+  const now = performance.now();
+  const remaining = [];
+  state.coinFly.forEach(c=>{
+    const progress = (now - c.start) / c.duration;
+    if(progress < 0){ remaining.push(c); return; } // hasn't launched yet
+    if(progress >= 1){
+      state.coinFlyAccum += state.coinFlyPerCoin;
+      hudCoins.textContent = '🪙 ' + Math.round(state.coins + state.coinFlyAccum);
+      SFX.coinTick();
+      return; // this coin has arrived — drop it
+    }
+    const ease = 1 - Math.pow(1-progress, 2);
+    const x = c.fromX + (c.targetX-c.fromX)*ease;
+    const arc = Math.sin(progress*Math.PI) * 40;
+    const y = c.fromY + (c.targetY-c.fromY)*ease - arc;
+    ctx.save();
+    ctx.fillStyle = '#ffd166';
+    ctx.strokeStyle = '#b8860b';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(x, y, 7, 0, Math.PI*2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+    remaining.push(c);
+  });
+  state.coinFly = remaining;
+  if(state.coinFly.length===0 && state.coinFlyDone){
+    const done = state.coinFlyDone;
+    state.coinFlyDone = null;
+    done();
+  }
+}
+
+function landCheck(){
+  const cfg = state.cfg;
+  const p = state.player;
+  const t = state.target;
+  const dx = Math.abs(p.x - t.x);
+  const success = p.chuteOpen && dx <= cfg.halfWidth;
+
+  state.phase = success ? 'landed' : 'crashed';
+  running = false;
+  stopTutorial();
+  state.camera.shakeT = success ? 140 : 220;
+  state.camera.shakeMag = success ? 3 : 6;
+  SFX.windStop();
+  SFX.landingThump();
+  if(!success){
+    if(p.chuteOpen) SFX.missedTarget();
+    else SFX.crashGround();
+  } else {
+    // Visually snap to dead-center on the target the instant you land.
+    // Landing was already within the accuracy tolerance (that's what
+    // "success" means), but showing you a few pixels off from dead-center
+    // read as "landed in front of the target" — this makes every
+    // successful landing look exactly on-target, matching what actually
+    // happened (a valid landing), while the star rating still reflects
+    // your real accuracy via the untouched dx value below.
+    p.x = t.x;
+  }
+
+  const resultTitle = document.getElementById('resultTitle');
+  const resultSub = document.getElementById('resultSub');
+  const resultStars = document.getElementById('resultStars');
+  const resultCoins = document.getElementById('resultCoins');
+  const nextBtn = document.getElementById('nextBtn');
+
+  draw();
+
+  if(success){
+    // trigger the celebration pose + confetti burst right at touchdown
+    p.landedAt = performance.now();
+    const cam0 = state.camera;
+    const burstX = (p.x - W/2 + cam0.panX) * cam0.scale + W/2;
+    const burstY = (p.y - H/2 + cam0.panY) * cam0.scale + H/2;
+    spawnConfetti(burstX, burstY);
+
+    const stars = starsForAccuracy(dx, cfg.halfWidth);
+    const coinsEarned = Math.round((10 + stars*8 + Math.floor(cfg.n/5)*3) * (activeAbilities().includes('🪙 +15% Coins') ? 1.15 : 1));
+    setTimeout(()=>{
+      // coins visibly fly from the landing spot into the HUD balance, with a
+      // tick per coin, before the result card appears. Convert through the
+      // camera transform so they start exactly where the character actually
+      // appears on screen, not the raw pre-camera world position.
+      const cam = state.camera;
+      const screenX = (p.x - W/2 + cam.panX) * cam.scale + W/2;
+      const screenY = (GROUND_Y-20 - H/2 + cam.panY) * cam.scale + H/2;
+      spawnCoinFly(screenX, screenY, coinsEarned, ()=>{
+        state.coins += coinsEarned;
+        updateCoinHud();
+        SFX.victory();
+
+        resultTitle.textContent = 'Nice Landing!';
+        resultTitle.className = 'win';
+        resultSub.textContent = 'Level ' + state.level + ' cleared — you stuck it on the ' + (cfg.type==='fixed'?'target':cfg.label.toLowerCase()) + '.';
+        renderStars(resultStars, stars);
+        resultCoins.textContent = '🪙 +' + coinsEarned + '  (total ' + state.coins + ')';
+        resultCoins.style.display = 'inline-block';
+        nextBtn.classList.remove('hidden');
+        document.getElementById('retryBtn').classList.remove('primary');
+        document.getElementById('retryBtn').classList.add('secondary');
+        document.getElementById('shopLink').classList.remove('hidden');
+        lastCoinsEarned = coinsEarned;
+        adDoubleUsedThisResult = false;
+        document.getElementById('watchAdDoubleBtn').classList.remove('hidden');
+        resultScreen.classList.remove('mood-sad');
+        document.getElementById('sadRain').classList.add('hidden');
+        resultScreen.classList.remove('hidden');
+      });
+    }, 300);
+  } else {
+    setTimeout(()=>{
+      resultTitle.textContent = p.chuteOpen ? 'Missed the Target' : 'Chute Never Opened!';
+      resultTitle.className = 'fail';
+      resultSub.textContent = p.chuteOpen ? 'You landed ' + Math.round(dx) + 'px off target. Steer earlier next time.' : 'You hit the ground before opening your chute.';
+      resultStars.innerHTML = '';
+      resultCoins.style.display = 'none';
+      nextBtn.classList.add('hidden');
+      document.getElementById('retryBtn').classList.remove('secondary');
+      document.getElementById('retryBtn').classList.add('primary');
+      document.getElementById('shopLink').classList.add('hidden');
+      document.getElementById('watchAdDoubleBtn').classList.add('hidden');
+      resultScreen.classList.add('mood-sad');
+      document.getElementById('sadRain').classList.remove('hidden');
+      resultScreen.classList.remove('hidden');
+    }, 450);
+  }
+}
+
+// ---------------------------------------------------------------
+// Drawing helpers
+// ---------------------------------------------------------------
+function drawSky(theme){
+  const g = ctx.createLinearGradient(0,0,0,GROUND_Y);
+  g.addColorStop(0, theme.sky[0]);
+  g.addColorStop(1, theme.sky[1]);
+  ctx.fillStyle = g;
+  ctx.fillRect(0,0,W,GROUND_Y+40);
+
+  // sun/moon
+  ctx.beginPath();
+  ctx.fillStyle = theme===SCENERIES.night ? '#eef2ff' : 'rgba(255,255,255,0.85)';
+  ctx.arc(W-90, 80, theme===SCENERIES.night?22:34, 0, Math.PI*2);
+  ctx.fill();
+
+  // stars for night
+  if(theme===SCENERIES.night){
+    ctx.fillStyle='rgba(255,255,255,0.8)';
+    for(let i=0;i<40;i++){
+      const sx = (i*97) % W;
+      const sy = (i*53) % (GROUND_Y-100);
+      ctx.fillRect(sx, sy, 2, 2);
+    }
+  }
+
+  // distant hills — a slow-drifting far layer so descending feels like
+  // passing real scenery, not just watching a static gradient
+  ctx.save();
+  ctx.fillStyle = theme===SCENERIES.night ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.14)';
+  const hillScroll = (performance.now()/55) % 240;
+  for(let i=-1;i<4;i++){
+    const hx = i*240 - hillScroll;
+    ctx.beginPath();
+    ctx.moveTo(hx, GROUND_Y-30);
+    ctx.quadraticCurveTo(hx+120, GROUND_Y-150, hx+240, GROUND_Y-30);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.restore();
+
+  // nearer, slightly faster tree-line silhouette for a second depth layer
+  ctx.save();
+  ctx.fillStyle = theme===SCENERIES.night ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.09)';
+  const treeScroll = (performance.now()/32) % 170;
+  for(let i=-1;i<5;i++){
+    const tx = i*170 - treeScroll;
+    ctx.beginPath();
+    ctx.moveTo(tx, GROUND_Y-20);
+    ctx.quadraticCurveTo(tx+85, GROUND_Y-95, tx+170, GROUND_Y-20);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.restore();
+
+  // clouds — mixed depths: big slow ones far away, small quicker ones near
+  state.cloudX -= 0.15;
+  ctx.fillStyle = theme===SCENERIES.night ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.55)';
+  for(let i=0;i<4;i++){
+    const cx = ((state.cloudX + i*260) % (W+200)) - 100;
+    const cy = 60 + (i%2)*50;
+    drawCloud(cx, cy, 40 + (i%2)*14);
+  }
+  ctx.save();
+  ctx.globalAlpha = 0.65;
+  const nearCloudX = (performance.now()/9) % (W+300) - 150;
+  drawCloud(nearCloudX, 130, 26);
+  drawCloud(nearCloudX-360, 170, 20);
+  ctx.restore();
+}
+function drawCloud(x,y,r){
+  ctx.beginPath();
+  ctx.arc(x,y,r*0.6,0,Math.PI*2);
+  ctx.arc(x+r*0.5,y+6,r*0.5,0,Math.PI*2);
+  ctx.arc(x-r*0.5,y+8,r*0.45,0,Math.PI*2);
+  ctx.fill();
+}
+
+function drawGround(theme){
+  ctx.fillStyle = theme.groundTop;
+  ctx.fillRect(0, GROUND_Y, W, 8);
+  ctx.fillStyle = theme.ground;
+  ctx.fillRect(0, GROUND_Y+8, W, H-GROUND_Y-8);
+
+  if(theme.deco==='buildings'){
+    ctx.fillStyle='rgba(0,0,0,0.12)';
+    for(let i=0;i<10;i++){
+      const bw=26, bh=18+((i*37)%40);
+      ctx.fillRect(i*62+6, GROUND_Y-bh+8, bw, bh);
+    }
+  } else if(theme.deco==='dunes'){
+    ctx.fillStyle='rgba(255,255,255,0.15)';
+    for(let i=0;i<7;i++){
+      ctx.beginPath();
+      ctx.ellipse(i*100+30, GROUND_Y+18, 60, 12, 0, 0, Math.PI*2);
+      ctx.fill();
+    }
+  } else if(theme.deco==='trees'){
+    ctx.fillStyle='#2f6b3c';
+    for(let i=0;i<10;i++){
+      const tx = i*62+18;
+      ctx.beginPath();
+      ctx.moveTo(tx, GROUND_Y+6);
+      ctx.lineTo(tx+13, GROUND_Y-22);
+      ctx.lineTo(tx+26, GROUND_Y+6);
+      ctx.fill();
+    }
+  } else if(theme.deco==='waves'){
+    ctx.strokeStyle='rgba(255,255,255,0.35)';
+    ctx.lineWidth=2;
+    for(let i=0;i<5;i++){
+      ctx.beginPath();
+      for(let x=0;x<=W;x+=20){
+        const yy = GROUND_Y+20+i*22 + Math.sin((x+performance.now()/300+i*40)/40)*4;
+        if(x===0) ctx.moveTo(x,yy); else ctx.lineTo(x,yy);
+      }
+      ctx.stroke();
+    }
+  } else if(theme.deco==='snow'){
+    ctx.fillStyle='rgba(255,255,255,0.9)';
+    for(let i=0;i<26;i++){
+      const sx=(i*53+((performance.now()/40)%W))%W;
+      const sy=(i*97)%GROUND_Y;
+      ctx.beginPath(); ctx.arc(sx,sy,2,0,Math.PI*2); ctx.fill();
+    }
+  } else if(theme.deco==='lights'){
+    for(let i=0;i<9;i++){
+      ctx.fillStyle='rgba(255,220,150,0.85)';
+      ctx.fillRect(i*62+16, GROUND_Y-34, 8, 34);
+      ctx.beginPath();
+      ctx.fillStyle='rgba(255,230,180,0.9)';
+      ctx.arc(i*62+20, GROUND_Y-40, 7,0,Math.PI*2); ctx.fill();
+    }
+  }
+}
+
+function drawTargetGlow(hw, cy){
+  const pulse = 0.5 + Math.sin(performance.now()/500)*0.5;
+  ctx.save();
+  ctx.globalAlpha = 0.16 + pulse*0.13;
+  const glow = ctx.createRadialGradient(0,cy,hw*0.2,0,cy,hw*1.35);
+  glow.addColorStop(0,'rgba(255,241,168,0.9)');
+  glow.addColorStop(1,'rgba(255,241,168,0)');
+  ctx.fillStyle = glow;
+  ctx.beginPath(); ctx.ellipse(0,cy,hw*1.35,hw*1.35*0.42,0,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+function drawTargetSparkles(hw, cy){
+  const now = performance.now();
+  for(let i=0;i<5;i++){
+    const ang = now/900 + i*(Math.PI*2/5);
+    const rx = Math.cos(ang)*hw*0.9;
+    const ry = Math.sin(ang)*hw*0.9*0.42;
+    const twinkle = 0.3 + 0.7*Math.abs(Math.sin(now/300 + i*2));
+    ctx.save();
+    ctx.globalAlpha = twinkle*0.85;
+    ctx.fillStyle = '#fff9d6';
+    ctx.beginPath();
+    ctx.arc(rx, cy+ry-6, 1.7, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+function drawTarget(cfg, t){
+  const y = GROUND_Y;
+  const bob = Math.sin(t.bob)*(cfg.type==='boat'||cfg.type==='ship'?4:0);
+  ctx.save();
+  ctx.translate(t.x, y+bob);
+
+  // landing marker under vehicle — now glossy with an ambient glow and sparkle
+  drawTargetGlow(cfg.halfWidth, 6);
+  ctx.save();
+  const markGrad = ctx.createRadialGradient(-cfg.halfWidth*0.2, 2, cfg.halfWidth*0.1, 0, 6, cfg.halfWidth);
+  markGrad.addColorStop(0, 'rgba(255,255,255,0.95)');
+  markGrad.addColorStop(1, 'rgba(255,255,255,0.5)');
+  ctx.fillStyle = markGrad;
+  ctx.beginPath();
+  ctx.ellipse(0, 6, cfg.halfWidth, 8, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.strokeStyle='#ff5f6d';
+  ctx.lineWidth=2;
+  ctx.beginPath(); ctx.ellipse(0,6,cfg.halfWidth*0.5,4,0,0,Math.PI*2); ctx.stroke();
+  ctx.restore();
+  if(cfg.type!=='fixed') drawTargetSparkles(cfg.halfWidth, 6);
+
+  // tutorial callout — pulsing ring so the target is unmistakable during the level-1 demo
+  if(state.highlightTarget){
+    ctx.save();
+    const pulse = 1 + Math.sin(performance.now()/180)*0.12;
+    ctx.globalAlpha = 0.7;
+    ctx.strokeStyle = '#ffd166';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.ellipse(0, -30, cfg.halfWidth*pulse+10, (cfg.halfWidth*pulse+10)*0.5, 0, 0, Math.PI*2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  const hw = cfg.halfWidth;
+
+  // speed lines trailing behind moving vehicles — skipped for the fixed target and water craft (waves already read as motion)
+  if(cfg.type!=='fixed' && cfg.type!=='boat' && cfg.type!=='ship'){
+    const back = -t.dir; // trail behind direction of travel
+    ctx.save();
+    ctx.strokeStyle='rgba(255,255,255,0.5)';
+    ctx.lineWidth=2;
+    ctx.lineCap='round';
+    for(let i=0;i<3;i++){
+      const lx = back*(hw*0.85 + i*10);
+      const ly = -18 - i*7;
+      ctx.beginPath();
+      ctx.moveTo(lx, ly);
+      ctx.lineTo(lx + back*14, ly);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  switch(cfg.type){
+    case 'fixed': {
+      drawTargetGlow(hw, -4);
+      // ground drop-zone rings (elliptical, matching the landing marker's perspective) — glossy gradient fill
+      const ringColors = ['#ffffff','#ff5f6d','#ffd166','#2e6bd1'];
+      for(let i=0;i<ringColors.length;i++){
+        const rx = hw*(1-i*0.22);
+        const ry = rx*0.42;
+        const grad = ctx.createRadialGradient(-rx*0.25,-4-ry*0.3,rx*0.08,0,-4,rx);
+        grad.addColorStop(0,'rgba(255,255,255,0.55)');
+        grad.addColorStop(0.45, ringColors[i]);
+        grad.addColorStop(1, ringColors[i]);
+        ctx.beginPath();
+        ctx.ellipse(0,-4,rx,ry,0,0,Math.PI*2);
+        ctx.fillStyle = grad;
+        ctx.fill();
+      }
+      ctx.fillStyle='#12233d';
+      ctx.beginPath(); ctx.ellipse(0,-4,hw*0.09,hw*0.09*0.42,0,0,Math.PI*2); ctx.fill();
+      drawTargetSparkles(hw, -4);
+
+      // drop-zone marker flag beside the rings — gently waving
+      const wave = Math.sin(performance.now()/260)*3;
+      ctx.strokeStyle='#e8edf3'; ctx.lineWidth=2.2;
+      ctx.beginPath(); ctx.moveTo(hw*0.75,-4); ctx.lineTo(hw*0.75,-46); ctx.stroke();
+      ctx.fillStyle='#ff5f6d';
+      ctx.beginPath();
+      ctx.moveTo(hw*0.75,-46);
+      ctx.quadraticCurveTo(hw*0.75+9+wave, -44, hw*0.75+16+wave, -41);
+      ctx.quadraticCurveTo(hw*0.75+9+wave, -38, hw*0.75,-36);
+      ctx.closePath(); ctx.fill();
+      break;
+    }
+    case 'car': {
+      ctx.fillStyle='#e05a4e';
+      roundRect(-hw*0.9,-26,hw*1.8,20,6); ctx.fill();
+      ctx.fillStyle='#c94236';
+      roundRect(-hw*0.55,-40,hw*1.1,18,6); ctx.fill();
+      highlight(-hw*0.82,-24,hw*1.1,4);
+      windows(-hw*0.48,-38,hw*0.95,13);
+      wheels([-hw*0.55, hw*0.55], -6);
+      break;
+    }
+    case 'van': {
+      ctx.fillStyle='#4c8fd6';
+      roundRect(-hw*0.95,-52,hw*1.9,46,8); ctx.fill();
+      windows(-hw*0.55,-42,hw*0.4,16);
+      highlight(-hw*0.88,-50,hw*1.3,5);
+      wheels([-hw*0.6, hw*0.6], -6);
+      break;
+    }
+    case 'truck': {
+      ctx.fillStyle='#d9d9d9';
+      roundRect(-hw*0.98,-44,hw*1.3,38,6); ctx.fill();
+      ctx.fillStyle='#3f6fae';
+      roundRect(-hw*0.35,-30,hw*1.3,26,4); ctx.fill();
+      highlight(-hw*0.9,-42,hw*1.1,4);
+      windows(-hw*0.85,-40,hw*0.7,12);
+      wheels([-hw*0.75,-hw*0.15, hw*0.6], -6);
+      break;
+    }
+    case 'train': {
+      ctx.fillStyle='#4a4f5c';
+      ctx.fillRect(-hw, 4, hw*2, 4); // rail
+      ctx.fillStyle='#c94236';
+      roundRect(-hw*0.95,-40,hw*0.9,34,6); ctx.fill();
+      ctx.fillStyle='#a8362b';
+      roundRect(-hw*0.05,-40,hw*1.0,34,6); ctx.fill();
+      windows(-hw*0.75,-32,14,12);
+      windows(hw*0.15,-32,14,12);
+      highlight(-hw*0.9,-38,hw*1.75,4);
+      wheels([-hw*0.7,-hw*0.3,hw*0.15,hw*0.55], -6);
+      break;
+    }
+    case 'boat': {
+      ctx.fillStyle='#f2c14e';
+      ctx.beginPath();
+      ctx.moveTo(-hw,-4); ctx.lineTo(hw,-4); ctx.lineTo(hw*0.7,14); ctx.lineTo(-hw*0.7,14);
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle='#e8e8e8';
+      roundRect(-hw*0.35,-26,hw*0.7,22,4); ctx.fill();
+      highlight(-hw*0.95,-4,hw*1.7,3);
+      break;
+    }
+    case 'ship': {
+      ctx.fillStyle='#5a6b7a';
+      ctx.beginPath();
+      ctx.moveTo(-hw,-2); ctx.lineTo(hw,-2); ctx.lineTo(hw*0.85,16); ctx.lineTo(-hw*0.85,16);
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle='#eef1f4';
+      roundRect(-hw*0.5,-34,hw*0.6,32,4); ctx.fill();
+      ctx.fillStyle='#d1453b';
+      ctx.fillRect(-hw*0.1,-52,10,20);
+      highlight(-hw*0.95,-2,hw*1.8,3);
+      break;
+    }
+  }
+  ctx.restore();
+}
+function windows(x,y,w,h){
+  ctx.save();
+  ctx.fillStyle='rgba(200,230,255,0.65)';
+  roundRect(x,y,w,h,3);
+  ctx.fill();
+  ctx.restore();
+}
+function highlight(x,y,w,h){
+  ctx.save();
+  ctx.fillStyle='rgba(255,255,255,0.35)';
+  roundRect(x,y,w,h,h/2);
+  ctx.fill();
+  ctx.restore();
+}
+function wheels(xs, y){
+  ctx.fillStyle='#1b1e24';
+  xs.forEach(x=>{ ctx.beginPath(); ctx.arc(x,y+2,8,0,Math.PI*2); ctx.fill(); });
+}
+function roundRect(x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+}
+
+function drawPlayer(p){
+  const skin = CHAR_LIST[state.chosenChar].skin;
+  const suit = CHAR_LIST[state.chosenChar].color;
+  const chute = CHUTE_LIST[state.chosenChuteIdx].color;
+
+  const now = performance.now();
+  const dodging = now < p.dodgeUntil;
+  const shielded = now < p.shieldUntil;
+  const gliding = p.chuteOpen && !dodging;
+  const celebrating = state.phase === 'landed';
+  const celebrateElapsed = celebrating ? (now - (p.landedAt || now)) : 0;
+
+  // gentle pendulum sway + soft bob + a light bank into the turn — purely
+  // cosmetic, drawn on top of the real physics position so it doesn't
+  // affect landing accuracy at all.
+  const swayX = gliding ? Math.sin(now/950 + p.x*0.01)*4.5 : 0;
+  const hopY = celebrating
+    ? -Math.abs(Math.sin(Math.min(celebrateElapsed,650)/650*Math.PI*1.8)) * 8 * Math.max(0, 1-celebrateElapsed/650)
+    : 0;
+  const bobY = celebrating ? hopY : (p.chuteOpen ? Math.sin(now/620)*2.2 : 0);
+  const bank = gliding ? Math.max(-0.22, Math.min(0.22, p.vx*0.05)) : 0;
+
+  ctx.save();
+  ctx.translate(p.x + swayX, p.y + bobY);
+  if(bank) ctx.rotate(bank);
+  // 2.5D depth cue: you visibly grow as you get closer to the ground/camera,
+  // same trick used for the plane and vehicles' implied depth
+  const depthScale = 0.82 + 0.34 * Math.max(0, Math.min(1, p.y / GROUND_Y));
+  ctx.scale(depthScale, depthScale);
+
+  // premium cosmetic abilities
+  const abilities = activeAbilities();
+  if(gliding && abilities.includes('✨ Sparkle Trail')){
+    for(let i=0;i<4;i++){
+      const sp = (now/90 + i*1.4) % 6;
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, 1 - sp/6);
+      ctx.fillStyle = '#ffe9a8';
+      ctx.beginPath();
+      ctx.arc(-p.vx*sp*2, 10+sp*10, 2.4, 0, Math.PI*2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+  if(abilities.includes('⭐ Golden Glow')){
+    ctx.save();
+    ctx.globalAlpha = 0.28 + Math.sin(now/260)*0.08;
+    ctx.fillStyle = '#ffe9a8';
+    ctx.beginPath();
+    ctx.arc(0,-10,24,0,Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  if(p.chuteOpen && !celebrating){
+    // shroud lines
+    ctx.strokeStyle='rgba(255,255,255,0.7)';
+    ctx.lineWidth=1.4;
+    ctx.beginPath(); ctx.moveTo(-9,-14); ctx.lineTo(-40,-70); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(9,-14); ctx.lineTo(40,-70); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-9,-14); ctx.lineTo(0,-70); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(9,-14); ctx.lineTo(0,-70); ctx.stroke();
+
+    // canopy — the dome gently billows like real fabric catching air
+    const billowTop = Math.sin(now/260)*4;
+    const billowBottom = Math.sin(now/260+1.4)*3;
+    ctx.fillStyle = chute;
+    ctx.beginPath();
+    ctx.moveTo(-46,-70);
+    ctx.quadraticCurveTo(0,-118+billowTop, 46,-70);
+    ctx.quadraticCurveTo(0,-84+billowBottom, -46,-70);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle='rgba(0,0,0,0.15)'; ctx.lineWidth=1.5;
+    for(let i=-2;i<=2;i++){
+      ctx.beginPath();
+      ctx.moveTo(i*18,-70+ (Math.abs(i)*3));
+      ctx.quadraticCurveTo(i*9,-100+billowTop*0.5, 0,-104+billowTop*0.5);
+      ctx.stroke();
+    }
+  } else if(celebrating && celebrateElapsed < 450){
+    // the canopy collapses and drifts away the instant you touch down —
+    // you visibly exit the glide instead of just standing there still rigged up
+    const fade = 1 - celebrateElapsed/450;
+    const drift = celebrateElapsed*0.09;
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, fade*0.85);
+    ctx.fillStyle = chute;
+    ctx.beginPath();
+    ctx.ellipse(18+drift, -50-drift*0.6, 22*fade+4, 10*fade+2, 0.4, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  } else {
+    // freefall pose — no more placeholder, the real plane is drawn separately in draw()
+  }
+
+  // legs
+  ctx.strokeStyle = suit;
+  ctx.lineWidth = 5;
+  ctx.lineCap='round';
+  if(celebrating){
+    // planted, standing legs — you've landed, not still hanging in a harness
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(-7, 20); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(7, 20); ctx.stroke();
+  } else if(dodging){
+    // knees tucked up toward chest to hop over obstacles
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(-10,-8); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(10,-8); ctx.stroke();
+  } else {
+    const legA = p.chuteOpen ? p.legAngle : 0.5;
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(-8+legA*10, 20); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(8-legA*10, 20); ctx.stroke();
+  }
+
+  // arms
+  if(celebrating){
+    // arms thrown straight up in a cheer — the actual celebration moment
+    ctx.beginPath(); ctx.moveTo(0,-16); ctx.lineTo(-14,-34); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0,-16); ctx.lineTo(14,-34); ctx.stroke();
+  } else {
+    const armA = p.chuteOpen ? -0.9 : -0.5;
+    ctx.beginPath(); ctx.moveTo(0,-16); ctx.lineTo(-16, -16+armA*20); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0,-16); ctx.lineTo(16, -16+armA*20); ctx.stroke();
+  }
+
+  // torso
+  ctx.strokeStyle = suit;
+  ctx.lineWidth=6;
+  ctx.beginPath(); ctx.moveTo(0,-16); ctx.lineTo(0,0); ctx.stroke();
+
+  // head
+  ctx.fillStyle = skin;
+  ctx.beginPath(); ctx.arc(0,-24,9,0,Math.PI*2); ctx.fill();
+
+  // shield / dodge safety bubble
+  if((shielded || dodging) && p.chuteOpen && !celebrating){
+    ctx.save();
+    ctx.globalAlpha = 0.3 + Math.sin(now/90)*0.12;
+    ctx.strokeStyle = '#7fe8ff';
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(0,-8,27,0,Math.PI*2); ctx.stroke();
+    ctx.fillStyle = 'rgba(127,232,255,0.14)';
+    ctx.beginPath(); ctx.arc(0,-8,27,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+
+  ctx.restore();
+}
+
+function drawObstacles(){
+  state.obstacles.forEach(o=>{
+    ctx.save();
+    ctx.translate(o.x, o.y);
+    if(o.type==='bird'){
+      if(o.dir<0) ctx.scale(-1,1); // face the direction it's actually flying
+      const flap = Math.sin(o.flap); // -1..1, both wings beat together
+
+      // tail feathers
+      ctx.fillStyle = '#5a8fd6';
+      ctx.beginPath();
+      ctx.moveTo(-7,1); ctx.lineTo(-16,-5); ctx.lineTo(-12,1); ctx.lineTo(-16,7);
+      ctx.closePath(); ctx.fill();
+
+      // round, cute body — bigger and friendlier than a realistic bird
+      ctx.fillStyle = '#7bb4ec';
+      ctx.beginPath();
+      ctx.ellipse(0,1,10,7,0,0,Math.PI*2);
+      ctx.fill();
+
+      // big round head with a blush — kid-friendly proportions
+      ctx.fillStyle = '#7bb4ec';
+      ctx.beginPath(); ctx.arc(9,-3,6.5,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle = 'rgba(255,140,160,0.55)';
+      ctx.beginPath(); ctx.arc(11,0,2.2,0,Math.PI*2); ctx.fill();
+
+      // big googly eye
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(11,-5,2.6,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#20304a';
+      ctx.beginPath(); ctx.arc(11.8,-5,1.4,0,Math.PI*2); ctx.fill();
+
+      // little orange beak
+      ctx.fillStyle = '#ffb347';
+      ctx.beginPath();
+      ctx.moveTo(14.5,-3); ctx.lineTo(19,-2); ctx.lineTo(14.5,-0.5);
+      ctx.closePath(); ctx.fill();
+
+      // wings — both sweep up together, then down, like a real wingbeat
+      ctx.fillStyle = '#4d7fc4';
+      ctx.beginPath();
+      ctx.moveTo(-3,0);
+      ctx.quadraticCurveTo(-1, -3-flap*12, 7, 0-flap*7);
+      ctx.quadraticCurveTo(0, 2, -3,0);
+      ctx.closePath(); ctx.fill();
+    } else if(o.type==='bee'){
+      if(o.dir<0) ctx.scale(-1,1);
+      const flap = Math.sin(o.flap*2.2)*6;
+      // wings (fast little flutter, drawn behind the body)
+      ctx.fillStyle = 'rgba(220,240,255,0.65)';
+      ctx.beginPath(); ctx.ellipse(-2,-6-Math.abs(flap*0.2),6,3.2, -0.3,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(4,-6-Math.abs(flap*0.2),6,3.2, 0.3,0,Math.PI*2); ctx.fill();
+      // round striped body
+      ctx.fillStyle = '#ffd23f';
+      ctx.beginPath(); ctx.ellipse(0,0,10,8,0,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#2b2b2b';
+      [-5,0,5].forEach(sx=>{ ctx.beginPath(); ctx.ellipse(sx,0,2,8,0,0,Math.PI*2); ctx.fill(); });
+      // face
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(7,-2,2.2,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#20304a';
+      ctx.beginPath(); ctx.arc(7.7,-2,1.1,0,Math.PI*2); ctx.fill();
+      // stinger + antennae
+      ctx.strokeStyle='#2b2b2b'; ctx.lineWidth=1.2;
+      ctx.beginPath(); ctx.moveTo(9,-6); ctx.lineTo(12,-9); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-9,0); ctx.lineTo(-13,0); ctx.stroke();
+    } else {
+      // funny balloon face instead of a plain oval
+      ctx.fillStyle = '#ff5f9e';
+      ctx.beginPath();
+      ctx.ellipse(0,0,12,15,0,0,Math.PI*2);
+      ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(-4,-3,2.6,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(4,-3,2.6,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#20304a';
+      ctx.beginPath(); ctx.arc(-4,-3,1.3,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(4,-3,1.3,0,Math.PI*2); ctx.fill();
+      ctx.strokeStyle = '#c23f6f'; ctx.lineWidth=1.6; ctx.lineCap='round';
+      ctx.beginPath(); ctx.arc(0,3,4,0.15*Math.PI,0.85*Math.PI); ctx.stroke();
+      ctx.strokeStyle='rgba(0,0,0,0.35)';
+      ctx.lineWidth=1.5;
+      ctx.beginPath();
+      ctx.moveTo(0,15); ctx.lineTo(0,30);
+      ctx.stroke();
+    }
+    ctx.restore();
+  });
+}
+
+function drawShotFx(){
+  if(state.shotFx.length===0) return;
+  const now = performance.now();
+  state.shotFx = state.shotFx.filter(s=>{
+    const elapsed = now - s.start;
+    if(elapsed > s.duration) return false;
+    const fade = 1 - elapsed/s.duration;
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, fade);
+    ctx.strokeStyle = s.color;
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(s.fromX, s.fromY);
+    ctx.lineTo(s.toX, s.toY);
+    ctx.stroke();
+    // small burst at the impact point
+    ctx.fillStyle = '#fff6d6';
+    ctx.beginPath();
+    ctx.arc(s.toX, s.toY, 5*fade+2, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+    return true;
+  });
+}
+
+function drawWindHint(cfg){
+  // always show a faint drifting breeze while the chute is open, stronger on windy levels
+  if(state.phase!=='open' && cfg.wind<=0) return;
+  const baseAlpha = state.phase==='open' ? 0.22 : 0;
+  const windAlpha = Math.min(0.5, cfg.wind*0.6);
+  ctx.save();
+  ctx.strokeStyle='#ffffff';
+  ctx.lineCap='round';
+  ctx.lineWidth=2;
+  for(let i=0;i<4;i++){
+    const yy = 50+i*(H*0.14) + Math.sin(performance.now()/900+i)*6;
+    const speedFactor = state.phase==='open' ? 16 : 12;
+    const off = (performance.now()/speedFactor + i*70)%(W+80) - 40;
+    ctx.globalAlpha = baseAlpha + windAlpha + Math.sin(performance.now()/500+i*2)*0.05;
+    ctx.beginPath();
+    ctx.moveTo(off,yy);
+    ctx.lineTo(off+34,yy);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawPlane(pl){
+  if(!pl) return;
+  if(pl.x < -140 || pl.x > W+140) return; // fully off-screen, skip
+  const accent = PLANE_LIST[state.chosenPlaneIdx].color;
+  ctx.save();
+  ctx.translate(pl.x, pl.y);
+  if(pl.dir<0) ctx.scale(-1,1);
+
+  // tail fin
+  ctx.fillStyle = accent;
+  ctx.beginPath();
+  ctx.moveTo(-34,-6); ctx.lineTo(-50,-24); ctx.lineTo(-28,-6);
+  ctx.closePath(); ctx.fill();
+
+  // fuselage
+  ctx.fillStyle = '#eef1f4';
+  roundRect(-36,-9,64,16,7); ctx.fill();
+
+  // cockpit stripe
+  ctx.fillStyle = accent;
+  ctx.fillRect(-36,-4,64,4);
+
+  // wing
+  ctx.fillStyle = accent;
+  ctx.beginPath();
+  ctx.moveTo(-6,-3); ctx.lineTo(12,-28); ctx.lineTo(20,-26); ctx.lineTo(4,3);
+  ctx.closePath(); ctx.fill();
+
+  // windows
+  ctx.fillStyle = '#274a73';
+  for(let i=0;i<4;i++){ ctx.beginPath(); ctx.arc(-18+i*11,-1,2.6,0,Math.PI*2); ctx.fill(); }
+
+  // nose + prop
+  ctx.fillStyle = '#eef1f4';
+  ctx.beginPath(); ctx.ellipse(30,-1,8,8,0,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='#2b2b2b'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(38,-8); ctx.lineTo(38,6); ctx.stroke();
+
+  // open door gap once the jumper has left
+  if(pl.dropped){
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.fillRect(-8,-8,7,14);
+  }
+
+  ctx.restore();
+}
+
+function drawPlaneRider(pl){
+  if(!pl || pl.dropped) return;
+  if(pl.x < -140 || pl.x > W+140) return;
+  const skin = CHAR_LIST[state.chosenChar].skin;
+  const suit = CHAR_LIST[state.chosenChar].color;
+  ctx.save();
+  ctx.translate(pl.x, pl.y);
+  if(pl.dir<0) ctx.scale(-1,1);
+  // a small figure standing in the open doorway, clearly inside the fuselage
+  // silhouette rather than floating alongside the plane
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  ctx.fillRect(-9,-8,7,15); // doorway shadow it's standing in
+  ctx.strokeStyle = suit;
+  ctx.lineWidth = 2.4;
+  ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(-6,1); ctx.lineTo(-6,6); ctx.stroke(); // legs hint
+  ctx.fillStyle = suit;
+  ctx.fillRect(-8,-6,4,7); // torso
+  ctx.fillStyle = skin;
+  ctx.beginPath(); ctx.arc(-6,-8,2.4,0,Math.PI*2); ctx.fill(); // head
+  ctx.restore();
+}
+
+function updateCamera(){
+  const cam = state.camera;
+  let ts=1, tpx=0, tpy=0;
+  const phase = state.phase;
+  if(phase==='plane'){
+    // steady front-on establishing shot, drifting gently to keep the plane in frame
+    ts = 0.92;
+    tpx = state.plane ? (state.plane.x - W/2) * 0.07 : 0;
+    tpy = -14;
+  } else if(phase==='falling'){
+    // punch in tight for the dramatic dive the instant you jump, already
+    // leaning toward the target so the landing zone starts entering frame
+    ts = 1.12;
+    tpy = 18;
+    if(state.player && state.target) tpx = Math.max(-35, Math.min(35, (state.target.x - state.player.x) * 0.12));
+  } else if(phase==='open'){
+    // chase-cam from behind, looking ahead toward the target — pulled back
+    // out for a clear gameplay framing so you can see where you're steering
+    ts = 1.0;
+    tpy = 4;
+    if(state.player && state.target) tpx = Math.max(-40, Math.min(40, (state.target.x - state.player.x) * 0.16));
+  } else if(phase==='landed' || phase==='crashed'){
+    // close-up on the touchdown moment
+    ts = 1.16;
+    tpy = 14;
+  }
+
+  // Level-1 activity: the camera itself demonstrates each control the
+  // instant the player tries it — nudging left/right/up/down — so the
+  // lesson is "watch what the camera does", not "read some text".
+  const now = performance.now();
+  if(now < cam.nudgeUntil){
+    const frac = (cam.nudgeUntil - now) / cam.nudgeDuration;
+    tpx += cam.nudgeX * frac;
+    tpy += cam.nudgeY * frac;
+  }
+
+  cam.targetScale = ts; cam.targetPanX = tpx; cam.targetPanY = tpy;
+  cam.scale += (cam.targetScale - cam.scale) * 0.06;
+  cam.panX  += (cam.targetPanX  - cam.panX)  * 0.06;
+  cam.panY  += (cam.targetPanY  - cam.panY)  * 0.06;
+  if(cam.shakeT > 0) cam.shakeT = Math.max(0, cam.shakeT - 16);
+}
+function triggerCameraNudge(dx, dy){
+  const cam = state.camera;
+  cam.nudgeX = dx;
+  cam.nudgeY = dy;
+  cam.nudgeDuration = 550;
+  cam.nudgeUntil = performance.now() + cam.nudgeDuration;
+}
+
+function draw(){
+  const cfg = state.cfg;
+  if(!cfg){ ctx.fillStyle='#0b1830'; ctx.fillRect(0,0,W,H); return; }
+  const theme = SCENERIES[cfg.scenery];
+
+  updateCamera();
+  const cam = state.camera;
+  const shakeX = cam.shakeT>0 ? (Math.random()*2-1)*cam.shakeMag : 0;
+  const shakeY = cam.shakeT>0 ? (Math.random()*2-1)*cam.shakeMag : 0;
+
+  ctx.save();
+  // camera rig: everything "in the world" is drawn through this transform —
+  // the HUD and overlays live outside the canvas entirely so they're never
+  // affected by the zoom/pan/shake.
+  ctx.translate(W/2, H/2);
+  ctx.scale(cam.scale, cam.scale);
+  ctx.translate(-W/2 + cam.panX + shakeX, -H/2 + cam.panY + shakeY);
+
+  drawSky(theme);
+  drawWindHint(cfg);
+  drawGround(theme);
+  drawTarget(cfg, state.target);
+  drawObstacles();
+  drawShotFx();
+  drawPlane(state.plane);
+  // While still aboard, show a small silhouette riding inside the doorway
+  // instead of the full body — the old version drew the whole character
+  // at the plane's exact position, which read as "dangling off the side."
+  // The full jump-pose body only appears once you've actually leapt clear.
+  if(state.phase==='plane'){
+    drawPlaneRider(state.plane);
+  } else {
+    drawPlayer(state.player);
+  }
+  ctx.restore();
+
+  // altitude bar — drawn outside the camera transform so it stays put on screen
+  const p = state.player;
+  const pct = Math.max(0, Math.min(1, 1 - p.y/GROUND_Y));
+  ctx.fillStyle='rgba(255,255,255,0.15)';
+  ctx.fillRect(W-26,20,10,GROUND_Y-40);
+  ctx.fillStyle='#ffd166';
+  ctx.fillRect(W-26, 20+(GROUND_Y-40)*(1-pct), 10, (GROUND_Y-40)*pct);
+
+  updateAndDrawCoinFly();
+  updateAndDrawConfetti();
+}
+
+// ---------------------------------------------------------------
+// Loop
+// ---------------------------------------------------------------
+let running = false;
+let lastT = 0;
+const touchControlsEl = document.getElementById('touchControls');
+function frame(ts){
+  const dt = Math.min(32, ts-lastT); lastT = ts;
+  if(running) update(dt);
+  draw();
+  if(state.cfg && state.player){
+    const now = performance.now();
+    const p = state.player;
+    hudStatus.textContent = state.phase==='plane' ? 'Tap to Jump!' :
+      state.phase==='falling' ? 'Free Falling' :
+      state.phase==='open' ? (now<p.shieldUntil ? 'Shielded!' : now<p.dodgeUntil ? 'Dodging!' : 'Steer to Target!') :
+      state.phase==='landed' ? 'Landed!' :
+      state.phase==='crashed' ? 'Crashed' : 'Get Ready';
+    const dodgeReady = now >= (p.dodgeCooldownUntil||0);
+    btnDodgeEl.style.opacity = dodgeReady ? '1' : '0.35';
+    const shootReady = now >= (p.shootCooldownUntil||0);
+    btnShootEl.style.opacity = shootReady ? '1' : '0.35';
+    // Only levels with more than 2 obstacles get the blaster — dodging alone
+    // stays the main tool on the calmer levels, so shooting feels like a
+    // real upgrade once things get crowded rather than a default crutch.
+    btnShootEl.classList.toggle('hidden', !state.shootEnabled);
+    jumpPromptEl.classList.toggle('hidden', state.phase!=='plane');
+  }
+  // Any full-screen menu open? The on-screen steering buttons sit near the
+  // bottom edge and were staying visible + clickable underneath menus,
+  // silently swallowing taps meant for things like the Shop's Done button
+  // or the Restart/Home links. Hide them whenever a menu is up.
+  const menuOpen = !startScreen.classList.contains('hidden')
+    || !document.getElementById('shopScreen').classList.contains('hidden')
+    || !document.getElementById('purchasePrompt').classList.contains('hidden')
+    || !document.getElementById('adOverlay').classList.contains('hidden')
+    || !resultScreen.classList.contains('hidden')
+    || !winScreen.classList.contains('hidden');
+  touchControlsEl.classList.toggle('hidden', menuOpen);
+  requestAnimationFrame(frame);
+}
+updateCoinHud();
+requestAnimationFrame(frame);
+
+})();
+</script>
+</body>
+</html>
