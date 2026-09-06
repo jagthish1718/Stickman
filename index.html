@@ -654,30 +654,48 @@ const SFX = (function(){
     ensure();
     planeStop();
     const t = ctx.currentTime;
-    const osc = ctx.createOscillator();
-    osc.type = 'sawtooth';
-    osc.frequency.value = 92;
-    const osc2 = ctx.createOscillator(); // second detuned layer for a fuller engine tone
-    osc2.type = 'square';
-    osc2.frequency.value = 46;
+
+    // Jet engine: white-noise turbine roar through a resonant bandpass that
+    // spools up, plus a high sawtooth turbine whine, plus a slow shimmer.
+    const noise = ctx.createBufferSource();
+    noise.buffer = noiseBuffer;
+    noise.loop = true;
+    const band = ctx.createBiquadFilter();
+    band.type = 'bandpass';
+    band.frequency.setValueAtTime(280, t);
+    band.frequency.linearRampToValueAtTime(880, t + 1.3);
+    band.Q.value = 1.3;
+    const lowpass = ctx.createBiquadFilter();
+    lowpass.type = 'lowpass';
+    lowpass.frequency.value = 2800;
+
+    const whine = ctx.createOscillator();
+    whine.type = 'sawtooth';
+    whine.frequency.setValueAtTime(1300, t);
+    whine.frequency.linearRampToValueAtTime(2150, t + 1.3);
+    const whineGain = ctx.createGain();
+    whineGain.gain.value = 0.011;
+
     const lfo = ctx.createOscillator();
-    lfo.frequency.value = 6.5;
+    lfo.frequency.value = 0.85;
     const lfoGain = ctx.createGain();
-    lfoGain.gain.value = 5;
-    lfo.connect(lfoGain).connect(osc.frequency);
+    lfoGain.gain.value = 130;
+    lfo.connect(lfoGain).connect(band.frequency);
+
     const gain = ctx.createGain();
     gain.gain.setValueAtTime(0.0001, t);
-    gain.gain.exponentialRampToValueAtTime(0.05, t+0.2);
-    const gain2 = ctx.createGain();
-    gain2.gain.value = 0.02;
-    osc.connect(gain).connect(ctx.destination);
-    osc2.connect(gain2).connect(gain).connect(ctx.destination);
-    osc.start(); osc2.start(); lfo.start();
-    plane = {osc, osc2, lfo, gain};
+    gain.gain.exponentialRampToValueAtTime(0.06, t + 0.4);
+
+    noise.connect(band).connect(lowpass).connect(gain).connect(ctx.destination);
+    whine.connect(whineGain).connect(gain);
+
+    noise.start(); whine.start(); lfo.start();
+    plane = { gain, sources:[noise, whine, lfo] };
   }
   function planeStop(){
     if(!plane) return;
-    fadeAndStop(plane.gain, [plane.osc, plane.osc2, plane.lfo], 0.15);
+    const sources = plane.sources || [plane.osc, plane.osc2, plane.lfo];
+    fadeAndStop(plane.gain, sources, plane.sources ? 0.25 : 0.15);
     plane = null;
   }
 
@@ -2062,7 +2080,7 @@ function crashObstacle(o){
   state.phase = 'crashed';
   running = false;
   stopTutorial();
-  state.camera.shakeT = 200; state.camera.shakeMag = 5;
+  state.camera.shakeT = 160; state.camera.shakeMag = 3;
   SFX.windStop();
   SFX.obstacleHit();
   draw();
@@ -2234,8 +2252,8 @@ function landCheck(){
     state.maxCleared = state.level;
     persistSave();
   }
-  state.camera.shakeT = success ? 140 : 220;
-  state.camera.shakeMag = success ? 3 : 6;
+  state.camera.shakeT = success ? 120 : 170;
+  state.camera.shakeMag = success ? 2 : 3.5;
   SFX.windStop();
   SFX.landingThump();
   if(!success){
@@ -3214,25 +3232,25 @@ function updateCamera(){
   const phase = state.phase;
   if(phase==='plane'){
     // steady front-on establishing shot, drifting gently to keep the plane in frame
-    ts = 0.92;
-    tpx = state.plane ? (state.plane.x - W/2) * 0.07 : 0;
-    tpy = -14;
+    ts = 0.94;
+    tpx = state.plane ? (state.plane.x - W/2) * 0.04 : 0;
+    tpy = -12;
   } else if(phase==='falling'){
-    // punch in tight for the dramatic dive the instant you jump, already
-    // leaning toward the target so the landing zone starts entering frame
-    ts = 1.12;
-    tpy = 18;
-    if(state.player && state.target) tpx = Math.max(-35, Math.min(35, (state.target.x - state.player.x) * 0.12));
+    // a small punch-in for the dive — kept close to the glide framing so the
+    // cut when the chute opens is barely noticeable
+    ts = 1.05;
+    tpy = 12;
+    if(state.player && state.target) tpx = Math.max(-16, Math.min(16, (state.target.x - state.player.x) * 0.06));
   } else if(phase==='open'){
-    // chase-cam from behind, looking ahead toward the target — pulled back
-    // out for a clear gameplay framing so you can see where you're steering
+    // steady gameplay framing — only a gentle lean toward the target so
+    // steering left/right doesn't swing the whole world around
     ts = 1.0;
     tpy = 4;
-    if(state.player && state.target) tpx = Math.max(-40, Math.min(40, (state.target.x - state.player.x) * 0.16));
+    if(state.player && state.target) tpx = Math.max(-20, Math.min(20, (state.target.x - state.player.x) * 0.07));
   } else if(phase==='landed' || phase==='crashed'){
-    // close-up on the touchdown moment
-    ts = 1.16;
-    tpy = 14;
+    // a mild close-up on the touchdown moment
+    ts = 1.06;
+    tpy = 10;
   }
 
   // Level-1 activity: the camera itself demonstrates each control the
@@ -3246,9 +3264,10 @@ function updateCamera(){
   }
 
   cam.targetScale = ts; cam.targetPanX = tpx; cam.targetPanY = tpy;
-  cam.scale += (cam.targetScale - cam.scale) * 0.06;
-  cam.panX  += (cam.targetPanX  - cam.panX)  * 0.06;
-  cam.panY  += (cam.targetPanY  - cam.panY)  * 0.06;
+  // slower easing = a calmer, more stable camera that doesn't chase every input
+  cam.scale += (cam.targetScale - cam.scale) * 0.045;
+  cam.panX  += (cam.targetPanX  - cam.panX)  * 0.035;
+  cam.panY  += (cam.targetPanY  - cam.panY)  * 0.04;
   if(cam.shakeT > 0) cam.shakeT = Math.max(0, cam.shakeT - 16);
 }
 function triggerCameraNudge(dx, dy){
