@@ -375,6 +375,7 @@
     margin:0 auto 5px; border:2px solid rgba(255,255,255,0.25);
   }
   .shopName{ font-size:10.5px; font-weight:700; color:var(--cream); line-height:1.2; }
+  .shopShape{ font-size:8.5px; font-weight:700; color:#9fc3e6; margin-top:1px; text-transform:capitalize; letter-spacing:0.2px; }
   .shopTag{ font-size:10px; font-weight:800; margin-top:3px; }
   .shopTag.free{ color:var(--mint); }
   .shopTag.premium{ color:var(--gold); }
@@ -1153,14 +1154,21 @@ const CHAR_SUIT_FREE  = ['#ff6a3d','#4fd6a0','#7c9bff','#ff5f9e','#ffd166','#9b6
 const CHAR_LIST = buildCatalog(CHAR_SUIT_FREE, 30, 8, 12, 72, 56, 99, 40, 'Jumper')
   .map((it,i)=>({ ...it, skin: CHAR_SKIN_TONES[i % CHAR_SKIN_TONES.length] }));
 
+// Canopy silhouettes — cycled across the catalog so even the free chutes vary
+const CANOPY_SHAPES = ['dome','square','triangle','hex','ramair','scalloped'];
 const CHUTE_FREE = ['#ff6a3d','#4fd6a0','#ffd166','#7c9bff','#ff5f9e','#ffffff','#ff8a4c','#5be3c9'];
-const CHUTE_LIST = buildCatalog(CHUTE_FREE, 30, 8, 205, 82, 60, 79, 30, 'Canopy');
+const CHUTE_LIST = buildCatalog(CHUTE_FREE, 30, 8, 205, 82, 60, 79, 30, 'Canopy')
+  .map((it,i)=>({ ...it, shape: CANOPY_SHAPES[i % CANOPY_SHAPES.length] }));
 
 const PLANE_FREE = ['#3f6fae','#4fb8ea','#6fc7e6','#3aa7d0','#7c9bff','#5be3c9','#4c8fd6','#8ecae6'];
 const PLANE_LIST = buildCatalog(PLANE_FREE, 30, 8, 30, 68, 52, 149, 50, 'Flyer');
 
+// Blaster body shapes paired with a matching projectile style
+const BLASTER_SHAPES = ['pistol','raygun','rifle','cannon','smg'];
+const SHOT_STYLES    = ['bolt','ball','beam','wave','spread'];
 const GUN_FREE = ['#9aa3ad','#4c8fd6','#4fd6a0','#ff6a3d','#ffd166','#7c9bff','#ff5f9e','#5be3c9'];
-const GUN_LIST = buildCatalog(GUN_FREE, 30, 8, 15, 75, 54, 129, 45, 'Blaster');
+const GUN_LIST = buildCatalog(GUN_FREE, 30, 8, 15, 75, 54, 129, 45, 'Blaster')
+  .map((it,i)=>({ ...it, shape: BLASTER_SHAPES[i % BLASTER_SHAPES.length], shot: SHOT_STYLES[i % SHOT_STYLES.length] }));
 
 function activeAbilities(){
   return [CHAR_LIST[state.chosenChar], CHUTE_LIST[state.chosenChuteIdx], PLANE_LIST[state.chosenPlaneIdx], GUN_LIST[state.chosenGunIdx]]
@@ -1492,6 +1500,7 @@ function renderShop(){
     card.innerHTML =
       '<div class="shopSwatch" style="'+swatchStyle+'"></div>' +
       '<div class="shopName">'+item.name+'</div>' +
+      (item.shape ? '<div class="shopShape">'+item.shape+(item.shot ? ' · '+item.shot : '')+'</div>' : '') +
       (item.free
         ? '<div class="shopTag free">FREE</div>'
         : '<div class="shopTag premium">$'+item.price+'</div>') +
@@ -1853,7 +1862,9 @@ function triggerShoot(){
   p.shootCooldownUntil = now + 550;
   if(!closest || closestDist > 260) { SFX.shootMiss(); return; } // fired, but nothing in range
   state.obstacles = state.obstacles.filter(o => o !== closest);
-  state.shotFx.push({ fromX:p.x, fromY:p.y-10, toX:closest.x, toY:closest.y, start:now, duration:140, color: GUN_LIST[state.chosenGunIdx].color });
+  const gun = GUN_LIST[state.chosenGunIdx];
+  const dur = gun.shot === 'ball' ? 300 : gun.shot === 'wave' ? 260 : gun.shot === 'beam' ? 200 : 150;
+  state.shotFx.push({ fromX:p.x+14, fromY:p.y-30, toX:closest.x, toY:closest.y, start:now, duration:dur, color: gun.color, style: gun.shot });
   SFX.shootHit();
 }
 const btnDodgeEl = document.getElementById('btnDodge');
@@ -2025,7 +2036,11 @@ function update(dt){
   if(p.y < p.openAt-70) p.y = p.openAt-70; // dodge hop can't overshoot too far up
   p.legAngle = Math.sin(performance.now()/120)*0.2;
 
-  const margin = 22;
+  // Once the chute is open, keep the whole canopy on screen (it spans about
+  // ±46, more with the depth scale) — not just the body. A jumper pinned to
+  // the very edge by plane momentum was showing a clipped strip of chute
+  // colour running down the screen edge.
+  const margin = p.chuteOpen ? 64 : 24;
   if(p.x < margin) { p.x = margin; p.vx = 0; }
   if(p.x > W-margin) { p.x = W-margin; p.vx = 0; }
 
@@ -2680,6 +2695,142 @@ function drawLandingGuide(p){
   ctx.restore();
 }
 
+// Parachute canopy — drawn in the jumper's local space (harness at ±9,-14,
+// canopy rim around y=-70). `chute.shape` picks the silhouette.
+function drawCanopy(chute, now){
+  const color = chute.color;
+  const shape = chute.shape || 'dome';
+  const bt = Math.sin(now/260)*4;       // billow at the crown
+  const bb = Math.sin(now/260+1.4)*3;   // billow along the hem
+  const rimY = -70;
+  const hw = shape === 'ramair' ? 52 : 46;
+
+  // shroud lines from the harness up to the canopy edges
+  ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+  ctx.lineWidth = 1.4;
+  ctx.beginPath(); ctx.moveTo(-9,-14); ctx.lineTo(-hw*0.86, rimY); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(9,-14);  ctx.lineTo(hw*0.86, rimY);  ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-9,-14); ctx.lineTo(-hw*0.22, rimY); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(9,-14);  ctx.lineTo(hw*0.22, rimY);  ctx.stroke();
+
+  ctx.fillStyle = color;
+  ctx.strokeStyle = 'rgba(0,0,0,0.16)';
+  ctx.lineWidth = 1.5;
+
+  switch(shape){
+    case 'square': {
+      ctx.beginPath();
+      ctx.moveTo(-hw, rimY);
+      ctx.lineTo(-hw+6, rimY-30-bt);
+      ctx.lineTo(hw-6, rimY-30-bt);
+      ctx.lineTo(hw, rimY);
+      ctx.quadraticCurveTo(0, rimY-10+bb, -hw, rimY);
+      ctx.closePath(); ctx.fill();
+      for(let i=-1;i<=1;i++){ ctx.beginPath(); ctx.moveTo(i*hw*0.5, rimY); ctx.lineTo(i*hw*0.5, rimY-28-bt); ctx.stroke(); }
+      break;
+    }
+    case 'triangle': {
+      ctx.beginPath();
+      ctx.moveTo(-hw, rimY);
+      ctx.lineTo(0, rimY-46-bt);
+      ctx.lineTo(hw, rimY);
+      ctx.quadraticCurveTo(0, rimY-9+bb, -hw, rimY);
+      ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(0, rimY); ctx.lineTo(0, rimY-42-bt); ctx.stroke();
+      break;
+    }
+    case 'hex': {
+      ctx.beginPath();
+      ctx.moveTo(-hw, rimY-4);
+      ctx.lineTo(-hw*0.5, rimY-40-bt);
+      ctx.lineTo(hw*0.5, rimY-40-bt);
+      ctx.lineTo(hw, rimY-4);
+      ctx.quadraticCurveTo(0, rimY-8+bb, -hw, rimY-4);
+      ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(-hw*0.5, rimY-4); ctx.lineTo(-hw*0.5, rimY-38-bt); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(hw*0.5, rimY-4); ctx.lineTo(hw*0.5, rimY-38-bt); ctx.stroke();
+      break;
+    }
+    case 'ramair': {
+      roundRect(-hw, rimY-20-bt, hw*2, 22, 6); ctx.fill();
+      for(let i=-3;i<=3;i++){ ctx.beginPath(); ctx.moveTo(i*hw*0.28, rimY-20-bt); ctx.lineTo(i*hw*0.28, rimY+1); ctx.stroke(); }
+      break;
+    }
+    case 'scalloped': {
+      ctx.beginPath();
+      ctx.moveTo(-hw, rimY);
+      ctx.quadraticCurveTo(0, rimY-50+bt, hw, rimY);
+      const n = 4;
+      for(let i=0;i<n;i++){
+        const x0 = hw - (i*2*hw/n);
+        const x1 = hw - ((i+1)*2*hw/n);
+        ctx.quadraticCurveTo((x0+x1)/2, rimY+9+bb, x1, rimY);
+      }
+      ctx.closePath(); ctx.fill();
+      break;
+    }
+    default: { // dome — the original billowing half-round
+      ctx.beginPath();
+      ctx.moveTo(-hw, rimY);
+      ctx.quadraticCurveTo(0, rimY-48+bt, hw, rimY);
+      ctx.quadraticCurveTo(0, rimY-14+bb, -hw, rimY);
+      ctx.closePath(); ctx.fill();
+      for(let i=-2;i<=2;i++){
+        ctx.beginPath();
+        ctx.moveTo(i*18, rimY + Math.abs(i)*3);
+        ctx.quadraticCurveTo(i*9, rimY-30+bt*0.5, 0, rimY-34+bt*0.5);
+        ctx.stroke();
+      }
+    }
+  }
+}
+
+// Blaster held in the jumper's right hand while the shoot control is available.
+function drawBlaster(gun){
+  const color = gun.color;
+  const shape = gun.shape || 'pistol';
+  ctx.save();
+  ctx.translate(15, -33);
+  ctx.rotate(0.18);
+  ctx.lineJoin = 'round';
+  switch(shape){
+    case 'rifle': {
+      ctx.fillStyle = '#3a3f4a'; roundRect(-2,-3,22,6,2); ctx.fill();
+      ctx.fillStyle = color;     roundRect(13,-4,10,8,2); ctx.fill();
+      ctx.fillStyle = '#2a2e37'; roundRect(-1,2,6,7,1); ctx.fill();
+      break;
+    }
+    case 'raygun': {
+      ctx.fillStyle = color;
+      ctx.beginPath(); ctx.ellipse(6,0,10,6,0,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#e9f6ff'; roundRect(13,-2.5,9,5,2); ctx.fill();
+      ctx.fillStyle = '#2a2e37'; roundRect(1,4,5,7,1); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.6)';
+      ctx.beginPath(); ctx.arc(3,-2,2,0,Math.PI*2); ctx.fill();
+      break;
+    }
+    case 'cannon': {
+      ctx.fillStyle = '#41474f'; roundRect(-3,-6,14,12,3); ctx.fill();
+      ctx.fillStyle = color;     roundRect(9,-5,14,10,3); ctx.fill();
+      ctx.fillStyle = '#23272e'; roundRect(0,5,7,8,1); ctx.fill();
+      break;
+    }
+    case 'smg': {
+      ctx.fillStyle = '#33373f'; roundRect(-3,-3,16,6,2); ctx.fill();
+      ctx.fillStyle = color;     roundRect(9,-3.5,6,7,1); ctx.fill();
+      ctx.fillStyle = '#23272e'; roundRect(-1,2,5,6,1); ctx.fill();
+      roundRect(2,3,3,9,1); ctx.fill();
+      break;
+    }
+    default: { // pistol
+      ctx.fillStyle = color;     roundRect(0,-3,14,6,2); ctx.fill();
+      ctx.fillStyle = '#2a2e37'; roundRect(1,2,5,7,1); ctx.fill();
+      ctx.fillStyle = '#e9f6ff'; roundRect(11,-2,4,4,1); ctx.fill();
+    }
+  }
+  ctx.restore();
+}
+
 function drawPlayer(p){
   const skin = CHAR_LIST[state.chosenChar].skin;
   const suit = CHAR_LIST[state.chosenChar].color;
@@ -2735,31 +2886,7 @@ function drawPlayer(p){
   }
 
   if(p.chuteOpen && !celebrating){
-    // shroud lines
-    ctx.strokeStyle='rgba(255,255,255,0.7)';
-    ctx.lineWidth=1.4;
-    ctx.beginPath(); ctx.moveTo(-9,-14); ctx.lineTo(-40,-70); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(9,-14); ctx.lineTo(40,-70); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(-9,-14); ctx.lineTo(0,-70); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(9,-14); ctx.lineTo(0,-70); ctx.stroke();
-
-    // canopy — the dome gently billows like real fabric catching air
-    const billowTop = Math.sin(now/260)*4;
-    const billowBottom = Math.sin(now/260+1.4)*3;
-    ctx.fillStyle = chute;
-    ctx.beginPath();
-    ctx.moveTo(-46,-70);
-    ctx.quadraticCurveTo(0,-118+billowTop, 46,-70);
-    ctx.quadraticCurveTo(0,-84+billowBottom, -46,-70);
-    ctx.closePath();
-    ctx.fill();
-    ctx.strokeStyle='rgba(0,0,0,0.15)'; ctx.lineWidth=1.5;
-    for(let i=-2;i<=2;i++){
-      ctx.beginPath();
-      ctx.moveTo(i*18,-70+ (Math.abs(i)*3));
-      ctx.quadraticCurveTo(i*9,-100+billowTop*0.5, 0,-104+billowTop*0.5);
-      ctx.stroke();
-    }
+    drawCanopy(CHUTE_LIST[state.chosenChuteIdx], now);
   } else if(celebrating && celebrateElapsed < 450){
     // the canopy collapses and drifts away the instant you touch down —
     // you visibly exit the glide instead of just standing there still rigged up
@@ -2803,6 +2930,11 @@ function drawPlayer(p){
     const armA = p.chuteOpen ? -0.9 : -0.5;
     ctx.beginPath(); ctx.moveTo(0,-16); ctx.lineTo(-16, -16+armA*20); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(0,-16); ctx.lineTo(16, -16+armA*20); ctx.stroke();
+  }
+
+  // blaster in the right hand, once the shoot control is live
+  if(state.shootEnabled && p.chuteOpen && !celebrating && !dodging){
+    drawBlaster(GUN_LIST[state.chosenGunIdx]);
   }
 
   // torso
@@ -2925,21 +3057,60 @@ function drawShotFx(){
   state.shotFx = state.shotFx.filter(s=>{
     const elapsed = now - s.start;
     if(elapsed > s.duration) return false;
-    const fade = 1 - elapsed/s.duration;
+    const t = elapsed / s.duration;      // 0..1
+    const fade = 1 - t;
+    const style = s.style || 'bolt';
+    const ang = Math.atan2(s.toY - s.fromY, s.toX - s.fromX);
+    const dist = Math.hypot(s.toX - s.fromX, s.toY - s.fromY);
+    let showBurst = true;
     ctx.save();
-    ctx.globalAlpha = Math.max(0, fade);
-    ctx.strokeStyle = s.color;
-    ctx.lineWidth = 3;
     ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(s.fromX, s.fromY);
-    ctx.lineTo(s.toX, s.toY);
-    ctx.stroke();
-    // small burst at the impact point
-    ctx.fillStyle = '#fff6d6';
-    ctx.beginPath();
-    ctx.arc(s.toX, s.toY, 5*fade+2, 0, Math.PI*2);
-    ctx.fill();
+
+    if(style === 'beam'){
+      ctx.globalAlpha = Math.max(0, fade);
+      ctx.strokeStyle = s.color; ctx.lineWidth = 8;
+      ctx.beginPath(); ctx.moveTo(s.fromX, s.fromY); ctx.lineTo(s.toX, s.toY); ctx.stroke();
+      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(s.fromX, s.fromY); ctx.lineTo(s.toX, s.toY); ctx.stroke();
+    } else if(style === 'ball'){
+      const tt = Math.min(1, t * 1.25);
+      const bx = s.fromX + (s.toX - s.fromX) * tt;
+      const by = s.fromY + (s.toY - s.fromY) * tt;
+      ctx.globalAlpha = 0.35;
+      ctx.fillStyle = s.color;
+      ctx.beginPath(); ctx.arc(bx, by, 9, 0, Math.PI*2); ctx.fill();
+      ctx.globalAlpha = 0.95;
+      ctx.fillStyle = '#fff6d6';
+      ctx.beginPath(); ctx.arc(bx, by, 4.5, 0, Math.PI*2); ctx.fill();
+      showBurst = tt >= 1;
+    } else if(style === 'spread'){
+      ctx.globalAlpha = Math.max(0, fade);
+      ctx.strokeStyle = s.color; ctx.lineWidth = 2.4;
+      for(const off of [-0.17, 0, 0.17]){
+        ctx.beginPath();
+        ctx.moveTo(s.fromX, s.fromY);
+        ctx.lineTo(s.fromX + Math.cos(ang+off)*dist, s.fromY + Math.sin(ang+off)*dist);
+        ctx.stroke();
+      }
+    } else if(style === 'wave'){
+      ctx.globalAlpha = Math.max(0, fade*0.9);
+      ctx.strokeStyle = s.color; ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(s.fromX, s.fromY, 6 + t*dist, ang - 0.6, ang + 0.6);
+      ctx.stroke();
+    } else { // bolt
+      ctx.globalAlpha = Math.max(0, fade);
+      ctx.strokeStyle = s.color; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(s.fromX, s.fromY); ctx.lineTo(s.toX, s.toY); ctx.stroke();
+    }
+
+    if(showBurst){
+      ctx.globalAlpha = Math.max(0, fade);
+      ctx.fillStyle = '#fff6d6';
+      ctx.beginPath();
+      ctx.arc(s.toX, s.toY, 5*fade + 2, 0, Math.PI*2);
+      ctx.fill();
+    }
     ctx.restore();
     return true;
   });
@@ -3128,14 +3299,28 @@ function draw(){
   }
   ctx.restore();
 
-  // altitude bar — drawn outside the camera transform so it stays put on screen
-  const p = state.player;
-  const spanTop = (p.startY ?? 40);
-  const pct = Math.max(0, Math.min(1, (GROUND_Y - p.y) / (GROUND_Y - spanTop)));
-  ctx.fillStyle='rgba(255,255,255,0.15)';
-  ctx.fillRect(W-26,20,10,GROUND_Y-40);
-  ctx.fillStyle='#ffd166';
-  ctx.fillRect(W-26, 20+(GROUND_Y-40)*(1-pct), 10, (GROUND_Y-40)*pct);
+  // altitude gauge — screen-fixed, drawn outside the camera transform. Kept as
+  // a short rounded meter tucked under the HUD so it reads as a UI element, not
+  // a stray coloured line running the full height of the screen edge.
+  if(state.phase === 'falling' || state.phase === 'open'){
+    const p = state.player;
+    const spanTop = (p.startY ?? 40);
+    const pct = Math.max(0, Math.min(1, (GROUND_Y - p.y) / (GROUND_Y - spanTop)));
+    const gx = W - 20, gw = 6, gy = 96;
+    const gh = Math.min(GROUND_Y - gy - 150, 210);
+    ctx.fillStyle = 'rgba(10,20,40,0.32)';
+    roundRect(gx - 4, gy - 7, gw + 8, gh + 14, 7); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.28)';
+    roundRect(gx, gy, gw, gh, 3); ctx.fill();
+    const fillH = Math.max(3, gh * pct);
+    ctx.fillStyle = '#ffd166';
+    roundRect(gx, gy + gh - fillH, gw, fillH, 3); ctx.fill();
+    const my = gy + gh - fillH;
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.moveTo(gx - 4, my); ctx.lineTo(gx - 10, my - 4); ctx.lineTo(gx - 10, my + 4);
+    ctx.closePath(); ctx.fill();
+  }
 
   updateAndDrawCoinFly();
   updateAndDrawConfetti();
