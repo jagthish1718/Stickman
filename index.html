@@ -79,40 +79,45 @@
 
   /* ---------- Touch controls ---------- */
   #touchControls{
-    position:absolute; bottom:14px; left:0; right:0;
-    display:flex; justify-content:space-between; padding:0 16px;
+    position:absolute; left:0; right:0;
+    bottom:calc(18px + env(safe-area-inset-bottom, 0px));
+    display:flex; justify-content:space-between; align-items:flex-end;
+    padding:0 12px;
     pointer-events:none;
   }
+  /* steering pair bottom-left, action cluster bottom-right — both sit right
+     under where a thumb naturally rests */
+  .ctrlGroup{ display:flex; gap:9px; align-items:flex-end; }
   .padBtn{
     pointer-events:auto;
-    width:64px; height:64px;
+    width:50px; height:50px;
     border-radius:50%;
     background:rgba(255,255,255,0.12);
     border:2px solid rgba(255,255,255,0.35);
     color:#fff;
-    font-size:26px;
+    font-size:20px;
     display:flex; align-items:center; justify-content:center;
     backdrop-filter: blur(2px);
     touch-action:none;
   }
-  .padBtn:active{ background:rgba(255,255,255,0.3); }
+  .padBtn:active{ background:rgba(255,255,255,0.3); transform:scale(0.94); }
   .dodgeBtn{
     background:rgba(127,232,255,0.22);
     border-color:rgba(127,232,255,0.55);
-    font-size:24px;
+    font-size:18px;
     transition: opacity 0.15s ease;
   }
   .diveBtn{
     background:rgba(255,138,76,0.22);
     border-color:rgba(255,138,76,0.55);
-    font-size:24px;
+    font-size:18px;
   }
   .diveBtn.active{ background:rgba(255,138,76,0.5); }
 
   .shootBtn{
     background:rgba(255,95,109,0.22);
     border-color:rgba(255,95,109,0.55);
-    font-size:22px;
+    font-size:17px;
     transition: opacity 0.15s ease;
   }
 
@@ -165,14 +170,14 @@
   #jumpBtn{
     font-family:'Baloo 2', sans-serif;
     font-weight:800;
-    font-size:20px;
+    font-size:16px;
     color:#12233d;
     background:linear-gradient(180deg, var(--gold), var(--orange));
     border:none;
-    padding:16px 30px;
-    border-radius:18px;
+    padding:11px 22px;
+    border-radius:15px;
     cursor:pointer;
-    box-shadow: 0 6px 0 #b8560f, 0 10px 22px rgba(0,0,0,0.4);
+    box-shadow: 0 5px 0 #b8560f, 0 8px 18px rgba(0,0,0,0.4);
     animation: jumpPulse 1s ease-in-out infinite;
   }
   #jumpBtn:active{ transform: translateY(4px); box-shadow: 0 2px 0 #b8560f; }
@@ -482,11 +487,15 @@
     </div>
 
     <div id="touchControls">
-      <div class="padBtn" id="btnLeft">◀</div>
-      <div class="padBtn dodgeBtn" id="btnDodge">⤒</div>
-      <div class="padBtn shootBtn hidden" id="btnShoot">🔫</div>
-      <div class="padBtn diveBtn" id="btnDive">⬇</div>
-      <div class="padBtn" id="btnRight">▶</div>
+      <div class="ctrlGroup ctrlLeft">
+        <div class="padBtn" id="btnLeft">◀</div>
+        <div class="padBtn" id="btnRight">▶</div>
+      </div>
+      <div class="ctrlGroup ctrlRight">
+        <div class="padBtn shootBtn hidden" id="btnShoot">🔫</div>
+        <div class="padBtn dodgeBtn" id="btnDodge">⤒</div>
+        <div class="padBtn diveBtn" id="btnDive">⬇</div>
+      </div>
     </div>
 
     <!-- INTRO / HOW TO PLAY -->
@@ -1370,6 +1379,7 @@ let state = {
   coinFly: [],
   confetti: [],
   shotFx: [],
+  hitParticles: [],
   shootEnabled: false,
   camera: { scale:1, targetScale:1, panX:0, targetPanX:0, panY:0, targetPanY:0, shakeT:0, shakeMag:0, nudgeX:0, nudgeY:0, nudgeUntil:0, nudgeDuration:550 },
   jumpRequested: false,
@@ -1877,12 +1887,21 @@ function triggerShoot(){
     const d = Math.hypot(p.x-o.x, p.y-o.y);
     if(d < closestDist){ closestDist = d; closest = o; }
   });
-  p.shootCooldownUntil = now + 550;
-  if(!closest || closestDist > 260) { SFX.shootMiss(); return; } // fired, but nothing in range
-  state.obstacles = state.obstacles.filter(o => o !== closest);
+  p.shootCooldownUntil = now + 480;
   const gun = GUN_LIST[state.chosenGunIdx];
+  const mx = p.x + 15, my = p.y - 30;
+  if(!closest || closestDist > 260){
+    // fired into empty air — still a muzzle flash and a few sparks
+    SFX.shootMiss();
+    state.shotFx.push({ fromX:mx, fromY:my, toX:mx + 90, toY:my - 30, start:now, duration:120, color:gun.color, style:gun.shot, whiff:true });
+    spawnHitBurst(mx + 60, my - 20, gun.color, 5);
+    return;
+  }
+  state.obstacles = state.obstacles.filter(o => o !== closest);
   const dur = gun.shot === 'ball' ? 300 : gun.shot === 'wave' ? 260 : gun.shot === 'beam' ? 200 : 150;
-  state.shotFx.push({ fromX:p.x+14, fromY:p.y-30, toX:closest.x, toY:closest.y, start:now, duration:dur, color: gun.color, style: gun.shot });
+  state.shotFx.push({ fromX:mx, fromY:my, toX:closest.x, toY:closest.y, start:now, duration:dur, color: gun.color, style: gun.shot });
+  spawnHitBurst(closest.x, closest.y, gun.color, 16);
+  state.camera.shakeT = 90; state.camera.shakeMag = 2.4;
   SFX.shootHit();
 }
 const btnDodgeEl = document.getElementById('btnDodge');
@@ -3069,6 +3088,56 @@ function drawObstacles(){
   });
 }
 
+// Impact debris — bright sparks that fly out from a hit and arc down.
+function spawnHitBurst(x, y, color, count){
+  const now = performance.now();
+  for(let i=0;i<count;i++){
+    const a = Math.random()*Math.PI*2;
+    const spd = 1.5 + Math.random()*4.5;
+    state.hitParticles.push({
+      x, y,
+      vx: Math.cos(a)*spd,
+      vy: Math.sin(a)*spd - 1,
+      color: Math.random() < 0.5 ? color : '#fff6d6',
+      size: 1.5 + Math.random()*2.5,
+      start: now,
+      duration: 320 + Math.random()*280
+    });
+  }
+  // a couple of chunky glowing embers
+  for(let i=0;i<3;i++){
+    const a = Math.random()*Math.PI*2;
+    state.hitParticles.push({
+      x, y, vx: Math.cos(a)*2.2, vy: Math.sin(a)*2.2 - 0.5,
+      color, size: 4 + Math.random()*2, glow:true,
+      start: now, duration: 260 + Math.random()*160
+    });
+  }
+}
+function updateAndDrawHitParticles(){
+  if(state.hitParticles.length === 0) return;
+  const now = performance.now();
+  state.hitParticles = state.hitParticles.filter(pt=>{
+    const el = now - pt.start;
+    if(el > pt.duration) return false;
+    const f = 1 - el/pt.duration;
+    const k = el/16.6667;
+    const px = pt.x + pt.vx*k;
+    const py = pt.y + pt.vy*k + 0.09*k*k;
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, f);
+    if(pt.glow){
+      ctx.shadowColor = pt.color; ctx.shadowBlur = 10;
+    }
+    ctx.fillStyle = pt.color;
+    ctx.beginPath();
+    ctx.arc(px, py, pt.size*f + 0.5, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+    return true;
+  });
+}
+
 function drawShotFx(){
   if(state.shotFx.length===0) return;
   const now = performance.now();
@@ -3080,31 +3149,76 @@ function drawShotFx(){
     const style = s.style || 'bolt';
     const ang = Math.atan2(s.toY - s.fromY, s.toX - s.fromX);
     const dist = Math.hypot(s.toX - s.fromX, s.toY - s.fromY);
-    let showBurst = true;
+    let showBurst = !s.whiff;
     ctx.save();
     ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.shadowColor = s.color;
+    ctx.shadowBlur = 14;
+
+    // muzzle flash — a bright spiky star at the barrel for the first instant
+    if(t < 0.4){
+      const mf = 1 - t/0.4;
+      ctx.save();
+      ctx.globalAlpha = mf;
+      ctx.translate(s.fromX, s.fromY);
+      ctx.rotate(ang);
+      ctx.fillStyle = '#fff6d6';
+      ctx.beginPath();
+      for(let i=0;i<8;i++){
+        const r = (i%2 ? 4 : 13) * (0.6 + mf*0.6);
+        const aa = i/8*Math.PI*2;
+        const fx = Math.cos(aa)*r, fy = Math.sin(aa)*r;
+        i ? ctx.lineTo(fx,fy) : ctx.moveTo(fx,fy);
+      }
+      ctx.closePath(); ctx.fill();
+      ctx.restore();
+    }
 
     if(style === 'beam'){
+      // jagged lightning bolt, flickering thickness, glowing
+      const segs = 7;
+      const flick = 0.7 + Math.random()*0.6;
+      const path = [];
+      for(let i=0;i<=segs;i++){
+        const u = i/segs;
+        const jitter = (i===0||i===segs) ? 0 : (Math.random()*2-1)*12;
+        path.push([
+          s.fromX + (s.toX-s.fromX)*u - Math.sin(ang)*jitter,
+          s.fromY + (s.toY-s.fromY)*u + Math.cos(ang)*jitter
+        ]);
+      }
       ctx.globalAlpha = Math.max(0, fade);
-      ctx.strokeStyle = s.color; ctx.lineWidth = 8;
-      ctx.beginPath(); ctx.moveTo(s.fromX, s.fromY); ctx.lineTo(s.toX, s.toY); ctx.stroke();
-      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.moveTo(s.fromX, s.fromY); ctx.lineTo(s.toX, s.toY); ctx.stroke();
+      ctx.strokeStyle = s.color; ctx.lineWidth = 9*flick;
+      ctx.beginPath(); path.forEach((p,i)=> i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.stroke();
+      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3*flick;
+      ctx.beginPath(); path.forEach((p,i)=> i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.stroke();
     } else if(style === 'ball'){
-      const tt = Math.min(1, t * 1.25);
+      // comet: glowing head + tapering trail
+      const tt = Math.min(1, t * 1.2);
       const bx = s.fromX + (s.toX - s.fromX) * tt;
       const by = s.fromY + (s.toY - s.fromY) * tt;
-      ctx.globalAlpha = 0.35;
+      ctx.globalAlpha = 0.5*fade + 0.3;
+      ctx.strokeStyle = s.color; ctx.lineWidth = 10;
+      ctx.beginPath();
+      ctx.moveTo(bx - Math.cos(ang)*44, by - Math.sin(ang)*44);
+      ctx.lineTo(bx, by); ctx.stroke();
+      ctx.globalAlpha = 0.4;
       ctx.fillStyle = s.color;
-      ctx.beginPath(); ctx.arc(bx, by, 9, 0, Math.PI*2); ctx.fill();
-      ctx.globalAlpha = 0.95;
+      ctx.beginPath(); ctx.arc(bx, by, 11, 0, Math.PI*2); ctx.fill();
+      ctx.globalAlpha = 1;
       ctx.fillStyle = '#fff6d6';
-      ctx.beginPath(); ctx.arc(bx, by, 4.5, 0, Math.PI*2); ctx.fill();
-      showBurst = tt >= 1;
+      ctx.beginPath(); ctx.arc(bx, by, 5.5, 0, Math.PI*2); ctx.fill();
+      // orbiting sparks
+      for(let i=0;i<3;i++){
+        const oa = now/50 + i*2.1;
+        ctx.beginPath(); ctx.arc(bx + Math.cos(oa)*10, by + Math.sin(oa)*10, 1.8, 0, Math.PI*2); ctx.fill();
+      }
+      showBurst = tt >= 1 && !s.whiff;
     } else if(style === 'spread'){
       ctx.globalAlpha = Math.max(0, fade);
-      ctx.strokeStyle = s.color; ctx.lineWidth = 2.4;
-      for(const off of [-0.17, 0, 0.17]){
+      ctx.strokeStyle = s.color; ctx.lineWidth = 3;
+      for(const off of [-0.34,-0.17, 0, 0.17, 0.34]){
         ctx.beginPath();
         ctx.moveTo(s.fromX, s.fromY);
         ctx.lineTo(s.fromX + Math.cos(ang+off)*dist, s.fromY + Math.sin(ang+off)*dist);
@@ -3112,22 +3226,30 @@ function drawShotFx(){
       }
     } else if(style === 'wave'){
       ctx.globalAlpha = Math.max(0, fade*0.9);
-      ctx.strokeStyle = s.color; ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.arc(s.fromX, s.fromY, 6 + t*dist, ang - 0.6, ang + 0.6);
-      ctx.stroke();
-    } else { // bolt
+      ctx.strokeStyle = s.color;
+      for(let r=0;r<3;r++){
+        const rad = 6 + (t - r*0.12)*dist*1.1;
+        if(rad < 1) continue;
+        ctx.lineWidth = 5 - r*1.4;
+        ctx.beginPath();
+        ctx.arc(s.fromX, s.fromY, rad, ang - 0.75, ang + 0.75);
+        ctx.stroke();
+      }
+    } else { // bolt — thick glowing tracer + white core
       ctx.globalAlpha = Math.max(0, fade);
-      ctx.strokeStyle = s.color; ctx.lineWidth = 3;
+      ctx.strokeStyle = s.color; ctx.lineWidth = 7;
+      ctx.beginPath(); ctx.moveTo(s.fromX, s.fromY); ctx.lineTo(s.toX, s.toY); ctx.stroke();
+      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.5;
       ctx.beginPath(); ctx.moveTo(s.fromX, s.fromY); ctx.lineTo(s.toX, s.toY); ctx.stroke();
     }
 
     if(showBurst){
+      // impact flash ring
       ctx.globalAlpha = Math.max(0, fade);
+      ctx.strokeStyle = '#fff6d6'; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.arc(s.toX, s.toY, 6 + t*22, 0, Math.PI*2); ctx.stroke();
       ctx.fillStyle = '#fff6d6';
-      ctx.beginPath();
-      ctx.arc(s.toX, s.toY, 5*fade + 2, 0, Math.PI*2);
-      ctx.fill();
+      ctx.beginPath(); ctx.arc(s.toX, s.toY, 6*fade + 2, 0, Math.PI*2); ctx.fill();
     }
     ctx.restore();
     return true;
@@ -3305,6 +3427,7 @@ function draw(){
   drawTarget(cfg, state.target);
   drawObstacles();
   drawShotFx();
+  updateAndDrawHitParticles();
   drawPlane(state.plane);
   // While still aboard, show a small silhouette riding inside the doorway
   // instead of the full body — the old version drew the whole character
@@ -3390,7 +3513,7 @@ updateCoinHud();
 requestAnimationFrame(frame);
 
 if(location.search.includes('debug')){
-  window.__dbg = { state, get p(){return state.player;}, get t(){return state.target;}, renderProgressTrail, setEasyMode, loadLevel };
+  window.__dbg = { state, get p(){return state.player;}, get t(){return state.target;}, renderProgressTrail, setEasyMode, loadLevel, triggerShoot, spawnHitBurst };
 }
 
 })();
